@@ -1,0 +1,47 @@
+name: triple-screen-scan
+
+on:
+  schedule:
+    # 每个交易日美东收盘后运行：21:30 UTC = 北京时间 05:30
+    # （夏令时 = 美东 17:30，冬令时 = 美东 16:30；GitHub 定时任务可能延迟 10~40 分钟）
+    - cron: "30 21 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 运行扫描
+        run: python scan.py
+
+      - name: 提交结果
+        if: always()
+        run: |
+          git config user.name "scan-bot"
+          git config user.email "scan-bot@users.noreply.github.com"
+          git add -A output
+          if git diff --cached --quiet; then
+            echo "没有变化，跳过提交"
+          else
+            git commit -m "scan: $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+            git push
+          fi
