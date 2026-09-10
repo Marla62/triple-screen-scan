@@ -124,37 +124,18 @@ def load_universe(status: dict) -> pd.DataFrame:
         status["errors"].append(f"S&P 500 名单获取失败: {e!r}")
 
     ndx = []
-    try:
-        r = requests.get(NDX_WIKI_URL, timeout=30, headers={"User-Agent": "Mozilla/5.0 (triple-screen-scan)"})
-        r.raise_for_status()
-        tables = pd.read_html(io.StringIO(r.text))
-        for tb in tables:
-            if len(tb) < 80 or len(tb) > 130:
-                continue
-            tb = tb.copy()
-            tb.columns = [" ".join(map(str, c)) if isinstance(c, tuple) else str(c) for c in tb.columns]
-            cols = list(tb.columns)
-            tcol = next((c for c in cols if "ticker" in c.lower() or "symbol" in c.lower()), None)
-            if tcol is None:
-                for c in cols:
-                    vals = set(tb[c].astype(str).str.strip().str.upper())
-                    if {"AAPL", "MSFT", "NVDA"} <= vals:
-                        tcol = c
-                        break
-            if tcol is None:
-                continue
-            ncol = next((c for c in cols if any(k in c.lower() for k in ("company", "security", "name"))), None)
-            scol = next((c for c in cols if "sector" in c.lower()), None)
-            for _, x in tb.iterrows():
-                t = str(x[tcol]).strip().upper()
-                if t and t != "NAN":
-                    ndx.append((t, str(x[ncol]) if ncol else t, str(x[scol]) if scol else ""))
-            break
-        if not ndx:
-            raise RuntimeError("Wikipedia 页面里没找到成分表")
-        status["ndx_source"] = "wikipedia"
-    except Exception as e:  # noqa
-        status["errors"].append(f"纳斯达克 100 名单获取失败，使用兜底名单: {e!r}")
+    for src_name, fn in (("wikipedia", _ndx_from_wikipedia), ("invesco_qqq", _ndx_from_invesco)):
+        try:
+            ndx = fn(status)
+            if len(ndx) >= 80:
+                status["ndx_source"] = src_name
+                break
+            status["errors"].append(f"纳斯达克 100 来源 {src_name} 只解析到 {len(ndx)} 只，换下一个来源")
+            ndx = []
+        except Exception as e:  # noqa
+            status["errors"].append(f"纳斯达克 100 来源 {src_name} 失败: {e!r}")
+    if not ndx:
+        status["errors"].append("纳斯达克 100 名单全部来源失败，使用内置兜底名单")
         ndx = [(t, t, "") for t in NDX_FALLBACK]
         status["ndx_source"] = "fallback"
     status["ndx_count"] = len(ndx)
@@ -167,6 +148,78 @@ def load_universe(status: dict) -> pd.DataFrame:
     uni = pd.DataFrame(list(rows.values())).sort_values("ticker").reset_index(drop=True)
     status["universe_size"] = len(uni)
     return uni
+
+
+def _pick_ticker_table(tables: list[pd.DataFrame], status: dict, tag: str) -> list[tuple[str, str, str]]:
+    """在若干表格里找“成分股表”：优先列名含 ticker/symbol，否则找同时含 AAPL/MSFT/NVDA 的列。"""
+    shapes = []
+    for tb in tables:
+        tb = tb.copy()
+        tb.columns = [" ".join(map(str, c)) if isinstance(c, tuple) else str(c) for c in tb.columns]
+        shapes.append(f"{tb.shape[0]}x{tb.shape[1]}:{'|'.join(str(c)[:12] for c in tb.columns[:5])}")
+        if len(tb) < 80 or len(tb) > 130:
+            continue
+        cols = list(tb.columns)
+        tcol = next((c for c in cols if "ticker" in c.lower() or "symbol" in c.lower()), None)
+        if tcol is None:
+            for c in cols:
+                vals = set(tb[c].astype(str).str.strip().str.upper())
+                if {"AAPL", "MSFT", "NVDA"} <= vals:
+                    tcol = c
+                    break
+        if tcol is None:
+            continue
+        ncol = next((c for c in cols if any(k in c.lower() for k in ("company", "security", "name"))), None)
+        scol = next((c for c in cols if "sector" in c.lower()), None)
+        out = []
+        for _, x in tb.iterrows():
+            t = str(x[tcol]).strip().upper()
+            if t and t != "NAN" and len(t) <= 6:
+                out.append((t, str(x[ncol]) if ncol else t, str(x[scol]) if scol else ""))
+        if len(out) >= 80:
+            return out
+    status[f"ndx_{tag}_tables"] = shapes[:12]  # 诊断：没匹配上时记录各表形状
+    return []
+
+
+def _ndx_from_wikipedia(status: dict) -> list[tuple[str, str, str]]:
+    import requests
+
+    r = requests.get(NDX_WIKI_URL, timeout=30,
+                     headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) triple-screen-scan/1.0 (+https://github.com)"})
+    r.raise_for_status()
+    status["ndx_wikipedia_bytes"] = len(r.text)
+    return _pick_ticker_table(pd.read_html(io.StringIO(r.text)), status, "wikipedia")
+
+
+def _ndx_from_invesco(status: dict) -> list[tuple[str, str, str]]:
+    """Invesco QQQ 持仓 CSV（跟踪纳斯达克 100）。"""
+    import requests
+
+    url = ("https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0"
+           "?audienceType=Investor&action=download&ticker=QQQ")
+    r = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+    r.raise_for_status()
+    df = pd.read_csv(io.StringIO(r.text))
+    df.columns = [str(c).strip() for c in df.columns]
+    tcol = next((c for c in df.columns if "holding ticker" in c.lower() or c.lower() == "ticker"), None)
+    if tcol is None:
+        for c in df.columns:
+            vals = set(df[c].astype(str).str.strip().str.upper())
+            if {"AAPL", "MSFT", "NVDA"} <= vals:
+                tcol = c
+                break
+    if tcol is None:
+        status["ndx_invesco_columns"] = list(df.columns)[:10]
+        return []
+    ncol = next((c for c in df.columns if c.lower() in ("name", "security name", "holding name")), None)
+    scol = next((c for c in df.columns if "sector" in c.lower()), None)
+    out = []
+    for _, x in df.iterrows():
+        t = str(x[tcol]).strip().upper()
+        if t and t != "NAN" and len(t) <= 6 and t.replace(".", "").isalpha():
+            out.append((t, str(x[ncol]) if ncol else t, str(x[scol]) if scol else ""))
+    return out
 
 
 def to_yahoo_symbol(t: str) -> str:
@@ -448,11 +501,22 @@ def run_strategy(d: pd.DataFrame, st: dict) -> tuple[list[Trade], dict]:
     return trades, last
 
 
+def wilson_lb(wins: int, n: int, z: float = 1.96) -> float:
+    """胜率的 Wilson 95% 置信下界：样本越少，向下修正越多（10 笔 10 胜 ≈ 72%，35 笔 30 胜 ≈ 71%）。"""
+    if n <= 0:
+        return 0.0
+    p = wins / n
+    denom = 1 + z * z / n
+    centre = p + z * z / (2 * n)
+    margin = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))
+    return (centre - margin) / denom
+
+
 def stats(trades: list[Trade]) -> dict:
     n = len(trades)
     if n == 0:
-        return {"trades": 0, "wins": 0, "win_rate": None, "avg_win": None, "avg_loss": None, "payoff": None,
-                "expectancy": None, "profit_factor": None, "avg_days": None, "exp_per_day": None, "reasons": {}}
+        return {"trades": 0, "wins": 0, "win_rate": None, "win_rate_lb": 0.0, "avg_win": None, "avg_loss": None,
+                "payoff": None, "expectancy": None, "profit_factor": None, "avg_days": None, "exp_per_day": None, "reasons": {}}
     r = np.array([t.ret for t in trades])
     wins, losses = r[r > 0], r[r <= 0]
     aw = float(wins.mean()) if len(wins) else 0.0
@@ -463,6 +527,7 @@ def stats(trades: list[Trade]) -> dict:
         reasons[t.reason] = reasons.get(t.reason, 0) + 1
     return {
         "trades": n, "wins": int(len(wins)), "win_rate": float(len(wins) / n),
+        "win_rate_lb": wilson_lb(int(len(wins)), n),
         "avg_win": aw, "avg_loss": al,
         "payoff": float(aw / abs(al)) if al < 0 else None,
         "expectancy": float(r.mean()),
@@ -539,8 +604,8 @@ def exit_text(st: dict) -> str:
 
 
 def rank_key(r: dict):
-    enough = 1 if (r["bt_trades"] or 0) >= MIN_TRADES else 0
-    return (-enough, -(r["bt_win_rate"] or 0), -(r["bt_payoff"] or 0), -(r["bt_trades"] or 0))
+    """按样本修正后的胜率（Wilson 95% 下界）降序；并列看盈亏比、笔数。"""
+    return (-(r["bt_win_rate_lb"] or 0), -(r["bt_payoff"] or 0), -(r["bt_trades"] or 0))
 
 
 # ----------------------------------------------------------------------------
@@ -548,7 +613,7 @@ def rank_key(r: dict):
 # ----------------------------------------------------------------------------
 CSV_COLS = ["rank", "ticker", "name", "sector", "index", "strategy", "status", "signal_date", "close", "high", "atr14", "atr_pct",
             "entry_mode", "buy_stop", "ref_price", "initial_stop", "target", "risk_per_share", "shares_per_10k",
-            "bt_win_rate", "bt_trades", "bt_wins", "bt_payoff", "bt_expectancy", "bt_profit_factor", "bt_avg_days",
+            "bt_win_rate_lb", "bt_win_rate", "bt_trades", "bt_wins", "bt_payoff", "bt_expectancy", "bt_profit_factor", "bt_avg_days",
             "rsi2", "w_hist_up", "fi2"]
 
 
@@ -577,7 +642,7 @@ def write_outputs(cands: list[dict], all_rows: list[dict], status: dict, as_of: 
         "strategy": strat_name, "strategy_label": st["label"], "strategy_desc": st["desc"],
         "entry_mode": st["entry"], "exit_rule": exit_text(st),
         "rules": {
-            "ranking": f"纯胜率降序；回测笔数 < {MIN_TRADES} 视为样本不足排后",
+            "ranking": f"按样本修正后的胜率（Wilson 95% 置信下界）降序，小样本自动向下修正；笔数 < {MIN_TRADES} 仍标注样本不足",
             "sizing": f"2% 原则：股数 = 2%×资金 ÷ ({st['stop_atr']:g}×ATR)，报告按每 ${SIZE_BASIS:,} 资金给出",
             "cost": f"回测每笔扣往返成本 {COST_RT * 100:.2f}%",
         },
@@ -598,15 +663,16 @@ def write_outputs(cands: list[dict], all_rows: list[dict], status: dict, as_of: 
              f"全池回测（同一规则）：{sys_st['trades']} 笔，胜率 {fmt_pct(sys_st['win_rate'])}，盈亏比 {fmt(sys_st['payoff'])}，"
              f"单笔期望 {fmt_pct(sys_st['expectancy'], 2)}，平均持有 {fmt(sys_st['avg_days'], 1)} 天", "",
              f"入场：{st['desc']}  ", f"出场：{exit_text(st)}  ",
-             f"胜率来自每只股票自身约 {LOOKBACK_YEARS - 1} 年的回测（含 {COST_RT * 100:.2f}% 往返成本），笔数 < {MIN_TRADES} 标记为样本不足。", "",
-             f"| # | 代码 | 名称 | 状态 | 收盘 | ATR14 | {price_hdr} | 初始止损 | 止盈 | 每股风险 | 每$1万可买 | 胜率 | 笔数 | 盈亏比 | 单笔期望 | 平均持有天 | 模拟持仓 |",
-             "|--:|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|"]
+             f"胜率来自每只股票自身约 {LOOKBACK_YEARS - 1} 年的回测（含 {COST_RT * 100:.2f}% 往返成本）。排序用“修正胜率”= Wilson 95% 置信下界，"
+             f"样本越少向下修正越多（10 笔 10 胜 ≈ 72%）；笔数 < {MIN_TRADES} 另标注样本不足。", "",
+             f"| # | 代码 | 名称 | 状态 | 收盘 | ATR14 | {price_hdr} | 初始止损 | 止盈 | 每股风险 | 每$1万可买 | 修正胜率 | 原始胜率 | 笔数 | 盈亏比 | 单笔期望 | 平均持有天 | 模拟持仓 |",
+             "|--:|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|"]
     for r in slim:
         low = "⚠️样本不足 " if (r["bt_trades"] or 0) < MIN_TRADES else ""
         sim = (f"持有中 {r['sim_entry_date']} 入场 {r['sim_entry']:.2f}，止损 {r['sim_stop']:.2f}" if r["sim_state"] == "long" else "")
         lines.append(f"| {r['rank']} | **{r['ticker']}** | {r['name'][:22]} | {r['status']} | {r['close']:.2f} | {r['atr14']:.2f} | "
                      f"{r['ref_price']:.2f} | {r['initial_stop']:.2f} | {fmt(r['target'])} | {r['risk_per_share']:.2f} | {r['shares_per_10k']} | "
-                     f"{low}{fmt_pct(r['bt_win_rate'])} | {r['bt_trades']} | {fmt(r['bt_payoff'])} | {fmt_pct(r['bt_expectancy'], 2)} | "
+                     f"**{fmt_pct(r['bt_win_rate_lb'])}** | {low}{fmt_pct(r['bt_win_rate'])} | {r['bt_trades']} | {fmt(r['bt_payoff'])} | {fmt_pct(r['bt_expectancy'], 2)} | "
                      f"{fmt(r['bt_avg_days'], 1)} | {sim} |")
     if status.get("errors"):
         lines += ["", "## 运行提示", ""] + [f"- {e}" for e in status["errors"][:30]]
@@ -647,7 +713,7 @@ def run_lab(uni: pd.DataFrame, prices: dict[str, pd.DataFrame], status: dict) ->
                   for y, v_ in sorted(by_year.items())}
         wr = [p["win_rate"] for p in per_ticker if (p["trades"] or 0) >= MIN_TRADES]
         top = sorted([p for p in per_ticker if (p["trades"] or 0) >= MIN_TRADES],
-                     key=lambda p: (-(p["win_rate"] or 0), -(p["payoff"] or 0)))[:15]
+                     key=lambda p: (-(p["win_rate_lb"] or 0), -(p["payoff"] or 0)))[:15]
         years = max((len(d) for d in ind.values()), default=250) / 252
         results[name] = {
             "label": st["label"], "desc": st["desc"], "exit": exit_text(st),
@@ -687,9 +753,9 @@ def run_lab(uni: pd.DataFrame, prices: dict[str, pd.DataFrame], status: dict) ->
     lines += ["", "## 出场原因分布", ""]
     for name, r in results.items():
         lines.append(f"- {r['label']}：" + "，".join(f"{k} {v}" for k, v in r["system"]["reasons"].items()))
-    lines += ["", "## 各策略胜率最高的股票（笔数 ≥ 8）", ""]
+    lines += ["", "## 各策略修正胜率最高的股票（Wilson 下界，笔数 ≥ 8）", ""]
     for name, r in results.items():
-        lines.append(f"**{r['label']}**：" + "，".join(f"{p['ticker']} {fmt_pct(p['win_rate'], 0)}({p['trades']}笔, 盈亏比{fmt(p['payoff'], 1)})" for p in r["top_tickers"][:10]))
+        lines.append(f"**{r['label']}**：" + "，".join(f"{p['ticker']} 修正{fmt_pct(p['win_rate_lb'], 0)}/原始{fmt_pct(p['win_rate'], 0)}({p['trades']}笔, 盈亏比{fmt(p['payoff'], 1)})" for p in r["top_tickers"][:10]))
         lines.append("")
     lines += ["## 策略定义", ""] + [f"- **{r['label']}**：{r['desc']}。出场：{r['exit']}" for r in results.values()]
     (OUT_DIR / "lab.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
