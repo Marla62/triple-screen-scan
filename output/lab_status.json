@@ -1,0 +1,18 @@
+{
+ "started_at": "2026-09-10T02:26:50+00:00",
+ "errors": [
+  "纳斯达克 100 名单获取失败，使用兜底名单: RuntimeError('Wikipedia 页面里没找到成分表')",
+  "yfinance 缺 1 只，尝试 stooq 兜底"
+ ],
+ "missing": [
+  "EA"
+ ],
+ "strategy": "triple_screen",
+ "mode": "lab",
+ "sp500_count": 503,
+ "ndx_source": "fallback",
+ "ndx_count": 100,
+ "universe_size": 516,
+ "priced": 515,
+ "elapsed_sec": 58.3
+}
