@@ -5,7 +5,14 @@ on:
     # 每个交易日美东收盘后运行：21:07 UTC = 北京时间 05:07（避开整点、半点的排队高峰）
     # （夏令时 = 美东 17:07，冬令时 = 美东 16:07；GitHub 定时任务仍可能延迟，Claude 的每日任务会等待重试）
     - cron: "7 21 * * 1-5"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      strategy:
+        description: "手动运行时用哪套策略（留空 = config.json 里的设置）"
+        required: false
+        default: ""
+        type: choice
+        options: ["", "triple_screen", "ts_target", "rsi2", "rsi2_strict", "bb_revert"]
 
 permissions:
   contents: write
@@ -30,7 +37,12 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: 运行扫描
-        run: python scan.py
+        run: |
+          if [ -n "${{ inputs.strategy }}" ]; then
+            python scan.py --strategy "${{ inputs.strategy }}"
+          else
+            python scan.py
+          fi
 
       - name: 提交结果
         if: always()
