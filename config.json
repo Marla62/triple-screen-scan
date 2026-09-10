@@ -1,0 +1,5 @@
+{
+  "strategy": "triple_screen",
+  "_options": ["triple_screen", "ts_target", "rsi2", "rsi2_strict", "bb_revert"],
+  "_note": "每日扫描使用的策略；改这一行并提交即可切换。策略定义见 scan.py 顶部 STRATEGIES。"
+}
