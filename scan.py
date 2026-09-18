@@ -16,9 +16,18 @@
   rsi2           RSI(2) 均值回归：收盘 > 200 日均线，RSI(2) < 10 次日开盘买入；收盘站上 5 日均线次日开盘卖出；3×ATR 保护止损；最多持 10 天
   rsi2_strict    同上，RSI(2) < 5
   bb_revert      布林带回归：收盘 > 200 日均线，收盘 < 下轨(20,2) 次日开盘买入；收盘回到中轨(20 日均线) 次日开盘卖出；3×ATR 保护止损；最多持 15 天
+  *_rf           以上策略加“大盘过滤器”：只在 SPY 收盘 > 其 200 日均线时接受新信号（已持仓不受影响）
+  mom_12_1       12-1 截面动量（月度）：每月最后一个交易日按“过去 12 个月收益（剔除最近 1 个月）”排名，
+                 取前 N 只且动量 > 0，次日开盘等权买入；掉出前 N 的次月初开盘卖出；SPY < 200 日均线时清仓持现金
+  mom_12_1_nf    同上，但不带大盘过滤器
 
 成交假设：买入止损单在触发日按 max(触发价, 开盘价) 成交；“次日开盘”按开盘价成交；止损/止盈盘中触发，跳空按开盘价；
   同日同时触及止损与止盈按止损计；收盘条件出场按次日开盘成交；每笔扣除 COST_RT（往返）成本。
+
+组合级评价（--lab）：除了单笔统计，每个策略还用同一套资金规则模拟一条账户资金曲线——
+  起始 START_EQUITY，信号类策略每笔按 2% 原则定仓（风险 = 2%×当前净值，仓位 = 风险 ÷ 每股风险），不用融资（现金不够就缩仓或跳过），
+  同时最多持 MAX_POSITIONS 只，同日信号过多按“信号强度”择优；动量策略等权持有前 N 只。
+  输出年化收益、最大回撤、Sharpe、Calmar、敞口、实际成交笔数，并与 SPY 买入持有对照。
 """
 from __future__ import annotations
 
@@ -47,6 +56,13 @@ MIN_TRADES = 8              # 少于此笔数的胜率视为“样本不足”
 RISK_PCT = 0.02
 SIZE_BASIS = 10_000
 COST_RT = 0.0005            # 往返成本 0.05%（佣金 + 滑点的保守估计），所有策略一视同仁
+START_EQUITY = 10_000       # 组合模拟起始资金
+MAX_POSITIONS = 10          # 组合模拟同时最多持仓数（信号类策略）
+MAX_POS_FRAC = 0.25         # 单只仓位不超过净值 25%（否则 2% 原则会把低波动票放到净值的 30~50%，永远只拿得住 2~3 只）
+MIN_NOTIONAL_FRAC = 0.05    # 现金不足以买到净值 5% 的仓位时跳过该信号
+MARKET_SYMBOL = "SPY"       # 大盘过滤器 / 基准
+MARKET_SMA = 200
+MOM_LOOKBACK, MOM_SKIP, MOM_TOP_N = 252, 21, 10   # 12-1 动量：过去 252 日剔除最近 21 日；持有前 10 只
 OUT_DIR = Path("output")
 CONFIG_PATH = Path("config.json")
 SP500_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv"
@@ -68,6 +84,9 @@ BKR VRSK XEL EA ZS CTSH LULU ODFL TEAM KHC GEHC CSGP DXCM ON TTD WBD BIIB GFS MD
 #   target_atr: 止盈 = 入场价 + target_atr × ATR（None 不设）
 #   exit_cond: 收盘满足该布尔列 → 次日开盘卖出（None 不设）
 #   max_days: 持有超过 N 个交易日 → 次日开盘卖出（None 不设）
+#   score: 同日信号过多、资金不够时的择优列（越大越优先），见 add_indicators
+#   regime: True 时只在 SPY 收盘 > 200 日均线的日子接受新信号
+#   kind: "signal"（上述逐票信号策略，默认）或 "momentum"（月度截面动量，见 run_momentum）
 STRATEGIES = {
     "triple_screen": dict(label="三重滤网 + 2×ATR 移动止损", entry="buy_stop", signal="sig_ts",
                           stop_atr=2.0, trailing=True, target_atr=None, exit_cond=None, max_days=None,
@@ -86,7 +105,27 @@ STRATEGIES = {
                       stop_atr=3.0, trailing=False, target_atr=None, exit_cond="x_sma20", max_days=15,
                       desc="收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天"),
 }
+_SCORE = {"sig_ts": "sc_ts", "sig_rsi2": "sc_rsi", "sig_rsi2s": "sc_rsi", "sig_bb": "sc_bb"}
+for _n, _s in STRATEGIES.items():
+    _s.setdefault("kind", "signal")
+    _s.setdefault("regime", False)
+    _s.setdefault("score", _SCORE.get(_s["signal"]))
+# 大盘过滤版本（同名 + _rf）
+for _n in ("triple_screen", "rsi2", "bb_revert"):
+    _b = STRATEGIES[_n]
+    STRATEGIES[_n + "_rf"] = dict(_b, label=_b["label"] + " + 大盘过滤", regime=True,
+                                  desc=_b["desc"] + f"；仅在 {MARKET_SYMBOL} 收盘 > {MARKET_SMA} 日均线时接受新信号")
+# 月度截面动量
+STRATEGIES["mom_12_1"] = dict(kind="momentum", label="12-1 动量（月度，前 10 只）+ 大盘过滤", entry="monthly", regime=True,
+                              signal=None, stop_atr=None, trailing=False, target_atr=None, exit_cond=None, max_days=None, score=None,
+                              desc=f"每月最后一个交易日按“过去 {MOM_LOOKBACK} 日收益（剔除最近 {MOM_SKIP} 日）”排名，取动量 > 0 的前 {MOM_TOP_N} 只，"
+                                   f"次日开盘等权买入；掉出前 {MOM_TOP_N} 的次月初开盘卖出；{MARKET_SYMBOL} 收盘 < {MARKET_SMA} 日均线时月末清仓持现金")
+STRATEGIES["mom_12_1_nf"] = dict(STRATEGIES["mom_12_1"], label="12-1 动量（月度，前 10 只）不带过滤", regime=False,
+                                 desc=STRATEGIES["mom_12_1"]["desc"].split("；" + MARKET_SYMBOL)[0] + "；不带大盘过滤器")
 DEFAULT_STRATEGY = "triple_screen"
+MARKET_OK: "pd.Series | None" = None     # 由 build_market() 填充：日期 → SPY 收盘是否在 200 日均线之上
+MARKET_CLOSE: "pd.Series | None" = None
+MARKET_LABEL = MARKET_SYMBOL             # 实际用的大盘序列名（拿不到 SPY 时是“等权代理指数”）
 
 
 def load_config() -> dict:
@@ -390,7 +429,40 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     d["sig_bb"] = up & (c < d["bb_lo"])
     d["x_sma5"] = c > d["sma5"]
     d["x_sma20"] = c >= d["sma20"]
+    # 同日信号择优用的“信号强度”（越大越优先）：均值回归取偏离越深越优先；三重滤网取回调（Force Index）相对成交量越深越优先
+    d["sc_bb"] = (d["bb_lo"] - c) / d["atr"]
+    d["sc_rsi"] = -d["rsi2"]
+    d["sc_ts"] = -d["fi2"] / (d["Volume"].rolling(20).mean() * d["atr"]).replace(0, np.nan)
     return d
+
+
+# ----------------------------------------------------------------------------
+# 大盘过滤器（SPY > 200 日均线）
+# ----------------------------------------------------------------------------
+def build_market(prices: dict[str, pd.DataFrame], status: dict) -> None:
+    """用 SPY 生成大盘状态；拿不到 SPY 时用股票池等权指数代替（按日收益率均值累积）。"""
+    global MARKET_OK, MARKET_CLOSE, MARKET_LABEL
+    if MARKET_SYMBOL in prices:
+        close = prices[MARKET_SYMBOL]["Close"].astype(float)
+        status["market_source"] = MARKET_LABEL = MARKET_SYMBOL
+    else:
+        rets = pd.concat({t: p["Close"].astype(float).pct_change() for t, p in prices.items()}, axis=1)
+        if rets.shape[1] == 0:
+            MARKET_OK = MARKET_CLOSE = None
+            return
+        close = (1 + rets.mean(axis=1).fillna(0)).cumprod() * 100
+        status["market_source"] = MARKET_LABEL = f"等权代理指数（{rets.shape[1]} 只）"
+        status["errors"].append(f"未取到 {MARKET_SYMBOL}，大盘过滤器改用股票池等权代理指数")
+    sma = close.rolling(MARKET_SMA).mean()
+    MARKET_CLOSE = close
+    MARKET_OK = (close > sma).where(sma.notna(), False).astype(bool)
+
+
+def market_flags(index: pd.DatetimeIndex) -> np.ndarray:
+    """把大盘状态对齐到某只股票的日期；某日缺大盘数据时沿用前一日。没有大盘数据时一律 True。"""
+    if MARKET_OK is None:
+        return np.ones(len(index), dtype=bool)
+    return MARKET_OK.reindex(index, method="ffill").fillna(False).values.astype(bool)
 
 
 # ----------------------------------------------------------------------------
@@ -405,12 +477,18 @@ class Trade:
     ret: float
     days: int
     reason: str
+    ticker: str = ""
+    risk: float = float("nan")   # 初始止损距离 / 入场价（组合模拟按 2% 原则定仓用）
+    score: float = 0.0           # 信号强度（同日信号过多时择优）
 
 
-def run_strategy(d: pd.DataFrame, st: dict) -> tuple[list[Trade], dict]:
+def run_strategy(d: pd.DataFrame, st: dict, ticker: str = "") -> tuple[list[Trade], dict]:
     O, H, L, C = (d[k].values.astype(float) for k in ("Open", "High", "Low", "Close"))
     A = d["atr"].values.astype(float)
     S = d[st["signal"]].values.astype(bool)
+    if st.get("regime"):
+        S = S & market_flags(d.index)
+    SC = d[st["score"]].values.astype(float) if st.get("score") else np.zeros(len(d))
     W = d["screen1"].values.astype(bool)
     X = d[st["exit_cond"]].values.astype(bool) if st["exit_cond"] else None
     V = d["valid"].values.astype(bool)
@@ -427,6 +505,11 @@ def run_strategy(d: pd.DataFrame, st: dict) -> tuple[list[Trade], dict]:
     entry_i = -1
     days_held = 0
     exit_pending = None     # None 或 出场原因（次日开盘执行）
+    sig_score = 0.0
+
+    def rec(i: int, px: float, reason: str) -> None:
+        trades.append(Trade(str(idx[entry_i].date()), str(idx[i].date()), entry, px, px / entry - 1 - COST_RT,
+                            i - entry_i, reason, ticker, k_stop * atr_e / entry, float(sig_score) if np.isfinite(sig_score) else 0.0))
 
     def open_position(i: int, px: float) -> bool:
         """在第 i 天以 px 建仓；返回 False 表示当天就被止损（已记录交易）。"""
@@ -439,7 +522,7 @@ def run_strategy(d: pd.DataFrame, st: dict) -> tuple[list[Trade], dict]:
         target = entry + k_tgt * a if k_tgt else math.nan
         hh = H[i]
         if L[i] <= stop:  # 入场当天触及初始止损：保守按止损出局
-            trades.append(Trade(str(idx[i].date()), str(idx[i].date()), entry, stop, stop / entry - 1 - COST_RT, 0, "stop"))
+            rec(i, stop, "stop")
             state = "flat"
             return False
         if trailing:
@@ -460,8 +543,7 @@ def run_strategy(d: pd.DataFrame, st: dict) -> tuple[list[Trade], dict]:
             elif k_tgt and h >= target:
                 px, reason = (target if o <= target else o), "target"
             if px is not None:
-                trades.append(Trade(str(idx[entry_i].date()), str(idx[i].date()), entry, px, px / entry - 1 - COST_RT,
-                                    i - entry_i, reason))
+                rec(i, px, reason)
                 state = "flat"
             else:
                 days_held += 1
@@ -483,13 +565,19 @@ def run_strategy(d: pd.DataFrame, st: dict) -> tuple[list[Trade], dict]:
             open_position(i, o)
 
         if state == "flat" and S[i]:
+            sig_score = SC[i]
             if st["entry"] == "buy_stop":
                 state, trigger, pending_since = "pending_stop", h + TICK, i
             else:
                 state, pending_since = "pending_open", i
 
+    open_trade = None
+    if state == "long":   # 数据末尾仍持有的仓位：按最后收盘价记一笔“未平仓”，供组合模拟按市值计入（不进胜率统计）
+        open_trade = Trade(str(idx[entry_i].date()), str(idx[n - 1].date()), entry, C[n - 1], C[n - 1] / entry - 1 - COST_RT,
+                           n - 1 - entry_i, "open", ticker, k_stop * atr_e / entry, float(sig_score) if np.isfinite(sig_score) else 0.0)
     last = {
         "state": state,
+        "open_trade": open_trade,
         "trigger": float(trigger) if state == "pending_stop" else None,
         "pending_since": str(idx[pending_since].date()) if state.startswith("pending") and pending_since >= 0 else None,
         "sim_entry": float(entry) if state == "long" else None,
@@ -539,18 +627,194 @@ def stats(trades: list[Trade]) -> dict:
 
 
 # ----------------------------------------------------------------------------
+# 组合级模拟：把逐票信号按同一套资金规则串成一条账户资金曲线
+# ----------------------------------------------------------------------------
+def price_matrix(ind: dict[str, pd.DataFrame], col: str) -> pd.DataFrame:
+    return pd.concat({t: d[col].astype(float) for t, d in ind.items()}, axis=1).sort_index()
+
+
+def simulate_portfolio(trades: list[Trade], closes: pd.DataFrame, start: pd.Timestamp,
+                       start_equity: float = START_EQUITY, risk_pct: float = RISK_PCT,
+                       max_pos: int = MAX_POSITIONS) -> dict:
+    """信号类策略的组合模拟。
+    每笔：风险 = risk_pct × 当前净值，仓位金额 = 风险 ÷ (每股风险/入场价)，不融资（现金不足则缩到现金、太小则跳过）；
+    同时最多 max_pos 只；同日信号多于可开仓数时按 score 降序择优；出场按单笔回测的出场价（已含往返成本）。
+    """
+    cal = closes.index[closes.index >= start]
+    by_entry: dict[pd.Timestamp, list[Trade]] = {}
+    for tr in trades:
+        e = pd.Timestamp(tr.entry_date)
+        if e >= start and np.isfinite(tr.risk) and tr.risk > 0:
+            by_entry.setdefault(e, []).append(tr)
+    cash, positions = float(start_equity), {}          # ticker -> [shares, entry, Trade]
+    equity, invested, npos = [], [], []
+    taken = skipped_slots = skipped_cash = 0
+    cval = closes.ffill().values                       # 某票某日缺行情时用最近一次收盘估值
+    col = {t: j for j, t in enumerate(closes.columns)}
+    date_pos = {d: k for k, d in enumerate(closes.index)}
+    prev_equity = float(start_equity)
+    for day in cal:
+        k = date_pos[day]
+        # 1) 出场（开盘或盘中，按单笔回测的成交价）
+        for t in [t for t, p in positions.items() if pd.Timestamp(p[2].exit_date) == day]:
+            sh, en, tr = positions.pop(t)
+            cash += sh * en * (1 + tr.ret)
+        # 2) 入场
+        for tr in sorted(by_entry.get(day, []), key=lambda x: -x.score):
+            if tr.ticker in positions:
+                continue
+            if len(positions) >= max_pos:
+                skipped_slots += 1
+                continue
+            notional = min(risk_pct * prev_equity / tr.risk, MAX_POS_FRAC * prev_equity, cash)
+            if notional < MIN_NOTIONAL_FRAC * prev_equity:
+                skipped_cash += 1
+                continue
+            taken += 1
+            if pd.Timestamp(tr.exit_date) == day:      # 入场当天就止损
+                cash += notional * tr.ret
+                continue
+            cash -= notional
+            positions[tr.ticker] = [notional / tr.entry, tr.entry, tr]
+        # 3) 收盘市值
+        inv = 0.0
+        for t, (sh, en, tr) in positions.items():
+            px = cval[k, col[t]]
+            inv += sh * (px if np.isfinite(px) else en)
+        prev_equity = cash + inv
+        equity.append(prev_equity)
+        invested.append(inv)
+        npos.append(len(positions))
+    eq = pd.Series(equity, index=cal)
+    m = curve_metrics(eq)
+    m.update({"trades_taken": taken, "skipped_no_slot": skipped_slots, "skipped_no_cash": skipped_cash,
+              "avg_positions": float(np.mean(npos)) if npos else 0.0,
+              "exposure": float(np.mean(np.array(invested) / np.array(equity))) if equity else 0.0})
+    return {"equity": eq, "metrics": m}
+
+
+def curve_metrics(eq: pd.Series) -> dict:
+    if len(eq) < 2:
+        return {"cagr": None, "max_dd": None, "sharpe": None, "calmar": None, "final": None, "years": 0, "yearly": {}}
+    years = (eq.index[-1] - eq.index[0]).days / 365.25
+    total = eq.iloc[-1] / eq.iloc[0]
+    cagr = total ** (1 / years) - 1 if years > 0 else None
+    dd = eq / eq.cummax() - 1
+    r = eq.pct_change().dropna()
+    sharpe = float(r.mean() / r.std() * math.sqrt(252)) if len(r) > 1 and r.std() > 0 else None
+    yearly = {}
+    for y, g in eq.groupby(eq.index.year):
+        prev = eq[eq.index < g.index[0]]
+        base = prev.iloc[-1] if len(prev) else g.iloc[0]
+        yearly[str(y)] = float(g.iloc[-1] / base - 1)
+    return {"cagr": float(cagr) if cagr is not None else None, "max_dd": float(dd.min()), "sharpe": sharpe,
+            "calmar": float(cagr / abs(dd.min())) if cagr is not None and dd.min() < 0 else None,
+            "final": float(eq.iloc[-1]), "years": round(years, 2), "yearly": yearly,
+            "start": str(eq.index[0].date()), "end": str(eq.index[-1].date())}
+
+
+def buy_and_hold(close: pd.Series, cal: pd.DatetimeIndex, start_equity: float = START_EQUITY) -> pd.Series:
+    c = close.reindex(cal, method="ffill").bfill()
+    return start_equity * c / c.iloc[0]
+
+
+# ----------------------------------------------------------------------------
+# 12-1 截面动量（月度）
+# ----------------------------------------------------------------------------
+def momentum_scores(closes: pd.DataFrame, k: int) -> pd.Series:
+    """第 k 行（月末）的 12-1 动量：Close[k-skip] / Close[k-lookback] − 1；数据不足的为 NaN。"""
+    if k - MOM_LOOKBACK < 0:
+        return pd.Series(np.nan, index=closes.columns)
+    win = closes.iloc[k - MOM_LOOKBACK:k + 1]
+    ff = win.ffill()
+    a, b = ff.iloc[0], ff.iloc[MOM_LOOKBACK - MOM_SKIP]
+    # 要求区间内数据基本完整（缺 5% 以上的票视为无效）
+    ok = win.notna().mean() >= 0.95
+    return (b / a - 1).where(ok)
+
+
+def month_ends(cal: pd.DatetimeIndex) -> list[int]:
+    ym = cal.to_period("M")
+    return [i for i in range(len(cal) - 1) if ym[i] != ym[i + 1]]
+
+
+def run_momentum(closes: pd.DataFrame, opens: pd.DataFrame, start: pd.Timestamp, st: dict,
+                 start_equity: float = START_EQUITY, top_n: int = MOM_TOP_N) -> dict:
+    """月末收盘排名，次日开盘调仓：卖出掉出前 N 的，用现金等分买入新进的；大盘过滤不通过时清仓。"""
+    cal = closes.index
+    mk = market_flags(cal) if st.get("regime") else np.ones(len(cal), dtype=bool)
+    rebal = [i for i in month_ends(cal) if cal[i] >= start and i - MOM_LOOKBACK >= 0]
+    empty = {"equity": pd.Series(dtype=float), "metrics": curve_metrics(pd.Series(dtype=float)), "trades": [], "holdings": {},
+             "targets": [], "market_ok_today": bool(mk[-1]) if len(cal) else False, "pending_target": None, "next_rebalance": None}
+    if not rebal:
+        return empty
+    sim_start = int(np.searchsorted(cal.values, np.datetime64(start)))   # 与其它策略同一起点，首个月末之前空仓持现金
+    cash, positions, trades = float(start_equity), {}, []   # ticker -> [shares, entry_px, entry_i]
+    equity, invested, npos = [], [], []
+    pending_target: list[str] | None = None
+    cv, ov = closes.ffill().values, opens.values
+    col = {t: j for j, t in enumerate(closes.columns)}
+    rebal_set = set(rebal)
+    for k in range(sim_start, len(cal)):
+        # 1) 月初开盘执行上月末决定的调仓（某票当天没有开盘价时按最近收盘价成交）
+        if pending_target is not None:
+            for t in [t for t in positions if t not in pending_target]:
+                sh, en, ei = positions.pop(t)
+                px = ov[k, col[t]] if np.isfinite(ov[k, col[t]]) else cv[k, col[t]]
+                cash += sh * px * (1 - COST_RT / 2)
+                trades.append(Trade(str(cal[ei].date()), str(cal[k].date()), en, px, px / en - 1 - COST_RT, k - ei, "rebal", t))
+            new = [t for t in pending_target if t not in positions and np.isfinite(ov[k, col[t]]) and ov[k, col[t]] > 0]
+            if new:
+                equity_now = cash + sum(sh * cv[k - 1, col[t]] for t, (sh, en, ei) in positions.items()) if k > 0 else cash
+                each = min(cash / len(new), equity_now / top_n)   # 新进的每只 ≤ 净值 / N，避免“三只掉出、一只新进”时把 30% 押在一只上
+                for t in new:
+                    px = ov[k, col[t]]
+                    positions[t] = [each * (1 - COST_RT / 2) / px, px, k]
+                    cash -= each
+            pending_target = None
+        # 2) 月末收盘决定下月目标
+        if k in rebal_set:
+            if mk[k]:
+                sc = momentum_scores(closes, k).dropna()
+                sc = sc[sc > 0].sort_values(ascending=False)
+                pending_target = list(sc.index[:top_n])
+            else:
+                pending_target = []
+        inv = 0.0
+        for t, (sh, en, ei) in positions.items():
+            px = cv[k, col[t]]
+            inv += sh * (px if np.isfinite(px) else en)
+        equity.append(cash + inv)
+        invested.append(inv)
+        npos.append(len(positions))
+    eq = pd.Series(equity, index=cal[sim_start:])
+    m = curve_metrics(eq)
+    m.update({"trades_taken": len(trades), "skipped_no_slot": 0, "skipped_no_cash": 0,
+              "avg_positions": float(np.mean(npos)) if npos else 0.0,
+              "exposure": float(np.mean(np.array(invested) / np.array(equity))) if equity else 0.0})
+    # 当前状态：持仓 + “若今天是月末”的目标名单 + 下一个调仓日
+    last = len(cal) - 1
+    sc_now = momentum_scores(closes, last).dropna().sort_values(ascending=False)
+    holdings = {t: {"entry": en, "entry_date": str(cal[ei].date()), "shares_frac": sh} for t, (sh, en, ei) in positions.items()}
+    nxt = cal[-1] + pd.offsets.BMonthEnd(0)
+    return {"equity": eq, "metrics": m, "trades": trades, "holdings": holdings,
+            "targets": [(t, float(v)) for t, v in sc_now.items()], "market_ok_today": bool(mk[last]),
+            "pending_target": pending_target, "next_rebalance": str(nxt.date())}
+
+
+# ----------------------------------------------------------------------------
 # 单票分析（每日模式）
 # ----------------------------------------------------------------------------
 def analyze(ticker: str, meta: dict, d: pd.DataFrame, strat_name: str) -> dict | None:
     st = STRATEGIES[strat_name]
     if not d["valid"].any():
         return None
-    trades, last = run_strategy(d, st)
+    trades, last = run_strategy(d, st, ticker)
     s = stats(trades)
     row = d.iloc[-1]
     as_of = str(d.index[-1].date())
     a = float(row["atr"])
-    is_signal = bool(row[st["signal"]])
+    is_signal = bool(row[st["signal"]]) and (not st.get("regime") or bool(market_flags(d.index[-1:])[0]))
     is_pending = last["state"].startswith("pending")
     candidate = is_signal or is_pending
     if st["entry"] == "buy_stop":
@@ -588,6 +852,9 @@ def analyze(ticker: str, meta: dict, d: pd.DataFrame, strat_name: str) -> dict |
 
 def exit_text(st: dict) -> str:
     parts = []
+    if st.get("kind") == "momentum":
+        return "；".join([f"每月最后一个交易日重新排名，掉出前 {MOM_TOP_N} 的次日开盘卖出；不设止损",
+                         f"{MARKET_SYMBOL} 收盘 < {MARKET_SMA} 日均线时月末清仓" if st.get("regime") else "不带大盘过滤"])
     if st["trailing"]:
         parts.append(f"移动止损 = 建仓后最高价 − {st['stop_atr']:g}×ATR")
     else:
@@ -603,6 +870,63 @@ def exit_text(st: dict) -> str:
     return "；".join(parts)
 
 
+def analyze_momentum(uni: pd.DataFrame, ind: dict[str, pd.DataFrame], strat_name: str, status: dict) -> tuple[list[dict], dict]:
+    """每日模式的动量策略：输出“若今天是月末”的排名前 N + 模拟持仓状态。"""
+    st = STRATEGIES[strat_name]
+    closes, opens = price_matrix(ind, "Close"), price_matrix(ind, "Open")
+    start = common_start(ind, closes)
+    res = run_momentum(closes, opens, start, st)
+    meta = {r["ticker"]: r for _, r in uni.iterrows()}
+    held = res["holdings"]
+    rows = []
+    ranked = dict(res["targets"])
+    rank_map = {t: i + 1 for i, (t, _) in enumerate(res["targets"])}
+    listed = [t for t, _ in res["targets"][:MOM_TOP_N * 2]]
+    listed += [t for t in held if t not in listed and t in ind]      # 已持有但掉出前 20 的也要列出来（月末将卖出）
+    for t in listed:
+        mom = ranked.get(t, float("nan"))
+        rank = rank_map.get(t, len(res["targets"]) + 1)
+        d = ind[t]
+        row = d.iloc[-1]
+        a = float(row["atr"])
+        close = float(row["Close"])
+        in_top = rank <= MOM_TOP_N and np.isfinite(mom) and mom > 0 and res["market_ok_today"]
+        if t in held:
+            status_txt = "持有中" + ("" if in_top else "（月末将卖出）")
+        else:
+            status_txt = "月末买入候选" if in_top else "观察"
+        rows.append({
+            "ticker": t, "name": meta.get(t, {}).get("name", t), "sector": meta.get(t, {}).get("sector", ""),
+            "index": meta.get(t, {}).get("index", ""), "strategy": strat_name, "as_of": str(d.index[-1].date()),
+            "close": round(close, 2), "high": round(float(row["High"]), 2), "atr14": round(a, 3), "atr_pct": round(a / close * 100, 2),
+            "candidate": in_top or t in held, "status": status_txt, "signal_date": res["next_rebalance"],
+            "entry_mode": "monthly", "entry_text": f"月末（{res['next_rebalance']}）收盘后确认排名，次日开盘等权买入",
+            "buy_stop": None, "ref_price": round(close, 2), "initial_stop": None, "target": None,
+            "exit_text": exit_text(st), "risk_per_share": None,
+            "shares_per_10k": int(math.floor(SIZE_BASIS / MOM_TOP_N / close)),
+            "momentum_12_1": round(float(mom), 4) if np.isfinite(mom) else None, "mom_rank": rank if np.isfinite(mom) else None,
+            "rsi2": round(float(row["rsi2"]), 1), "fi2": round(float(row["fi2"]), 0),
+            "w_hist_up": bool(row["w_hist_up"]), "screen1": bool(row["screen1"]), "screen2": bool(row["screen2"]),
+            "sim_state": "long" if t in held else "flat",
+            "sim_entry": held[t]["entry"] if t in held else None, "sim_entry_date": held[t]["entry_date"] if t in held else None,
+            "sim_stop": None, "bt_from": res["metrics"].get("start"),
+            **{f"bt_{k}": None for k in ("trades", "wins", "win_rate", "avg_win", "avg_loss", "payoff", "expectancy",
+                                          "profit_factor", "avg_days", "exp_per_day")},
+            "bt_win_rate_lb": 0.0, "_trades": [],
+        })
+    extra = {"market_ok": res["market_ok_today"], "next_rebalance": res["next_rebalance"],
+             "sim_holdings": held, "portfolio": res["metrics"], "_trades": res["trades"]}
+    return rows, extra
+
+
+def common_start(ind: dict[str, pd.DataFrame], closes: pd.DataFrame) -> pd.Timestamp:
+    """组合模拟的统一起点：多数股票指标预热完成的日期，且保证动量策略有足够回看期。"""
+    firsts = [d.index[d["valid"].values.argmax()] for d in ind.values() if d["valid"].any()]
+    s = pd.Series(firsts).median() if firsts else closes.index[0]
+    k = min(MOM_LOOKBACK + 1, len(closes) - 1)
+    return max(pd.Timestamp(s), closes.index[k])
+
+
 def rank_key(r: dict):
     """按样本修正后的胜率（Wilson 95% 下界）降序；并列看盈亏比、笔数。"""
     return (-(r["bt_win_rate_lb"] or 0), -(r["bt_payoff"] or 0), -(r["bt_trades"] or 0))
@@ -614,7 +938,7 @@ def rank_key(r: dict):
 CSV_COLS = ["rank", "ticker", "name", "sector", "index", "strategy", "status", "signal_date", "close", "high", "atr14", "atr_pct",
             "entry_mode", "buy_stop", "ref_price", "initial_stop", "target", "risk_per_share", "shares_per_10k",
             "bt_win_rate_lb", "bt_win_rate", "bt_trades", "bt_wins", "bt_payoff", "bt_expectancy", "bt_profit_factor", "bt_avg_days",
-            "rsi2", "w_hist_up", "fi2"]
+            "rsi2", "w_hist_up", "fi2", "momentum_12_1", "mom_rank"]
 
 
 def fmt_pct(x, nd=1):
@@ -625,31 +949,50 @@ def fmt(x, nd=2):
     return "" if x is None or (isinstance(x, float) and math.isnan(x)) else f"{x:.{nd}f}"
 
 
-def write_outputs(cands: list[dict], all_rows: list[dict], status: dict, as_of: str, strat_name: str) -> None:
+def market_info(as_of: str) -> dict:
+    if MARKET_CLOSE is None:
+        return {"available": False}
+    c = MARKET_CLOSE[MARKET_CLOSE.index <= pd.Timestamp(as_of)]
+    if len(c) == 0:
+        return {"available": False}
+    sma = float(c.rolling(MARKET_SMA).mean().iloc[-1]) if len(c) >= MARKET_SMA else None
+    return {"available": True, "symbol": MARKET_LABEL, "date": str(c.index[-1].date()), "close": round(float(c.iloc[-1]), 2),
+            f"sma{MARKET_SMA}": round(sma, 2) if sma else None, "above_sma": bool(c.iloc[-1] > sma) if sma else None}
+
+
+def write_outputs(cands: list[dict], all_rows: list[dict], status: dict, as_of: str, strat_name: str,
+                  extra: dict | None = None) -> None:
     st = STRATEGIES[strat_name]
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUT_DIR / "history").mkdir(exist_ok=True)
-    all_trades = [Trade(**t) for r in all_rows for t in r["_trades"]]
+    extra = extra or {}
+    all_trades = extra.get("_trades") or [Trade(**t) for r in all_rows for t in r["_trades"]]
     sys_st = stats(all_trades)
     sys_st["tickers_with_data"] = len(all_rows)
 
     for i, r in enumerate(cands, 1):
         r["rank"] = i
     slim = [{k: v for k, v in r.items() if not k.startswith("_")} for r in cands]
+    is_mom = st.get("kind") == "momentum"
     payload = {
         "as_of": as_of,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "strategy": strat_name, "strategy_label": st["label"], "strategy_desc": st["desc"],
         "entry_mode": st["entry"], "exit_rule": exit_text(st),
+        "regime_filter": bool(st.get("regime")),
+        "market": market_info(as_of),
         "rules": {
-            "ranking": f"按样本修正后的胜率（Wilson 95% 置信下界）降序，小样本自动向下修正；笔数 < {MIN_TRADES} 仍标注样本不足",
-            "sizing": f"2% 原则：股数 = 2%×资金 ÷ ({st['stop_atr']:g}×ATR)，报告按每 ${SIZE_BASIS:,} 资金给出",
+            "ranking": (f"按 12-1 动量降序；前 {MOM_TOP_N} 名为月末买入候选" if is_mom else
+                        f"按样本修正后的胜率（Wilson 95% 置信下界）降序，小样本自动向下修正；笔数 < {MIN_TRADES} 仍标注样本不足"),
+            "sizing": (f"等权：每只 = 资金 ÷ {MOM_TOP_N}，报告按每 ${SIZE_BASIS:,} 资金给出" if is_mom else
+                       f"2% 原则：股数 = 2%×资金 ÷ ({st['stop_atr']:g}×ATR)，报告按每 ${SIZE_BASIS:,} 资金给出"),
             "cost": f"回测每笔扣往返成本 {COST_RT * 100:.2f}%",
         },
         "system_stats": sys_st,
         "candidate_count": len(slim),
         "candidates": slim,
         "status": status,
+        **{k: v for k, v in extra.items() if not k.startswith("_")},
     }
     (OUT_DIR / "latest.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
     (OUT_DIR / "history" / f"{as_of}.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
@@ -657,23 +1000,39 @@ def write_outputs(cands: list[dict], all_rows: list[dict], status: dict, as_of: 
     (OUT_DIR / "status.json").write_text(json.dumps(status, ensure_ascii=False, indent=1), encoding="utf-8")
 
     price_hdr = "买入止损价" if st["entry"] == "buy_stop" else "参考价(收盘)"
+    mk = payload["market"]
+    mk_line = (f"大盘：{mk['symbol']} {mk['date']} 收盘 {mk['close']}，{MARKET_SMA} 日均线 {mk.get(f'sma{MARKET_SMA}')}，"
+               f"{'在均线之上 ✅' if mk.get('above_sma') else '在均线之下 ⛔'}" + ("（本策略带大盘过滤）" if st.get("regime") else "（本策略不带过滤，仅供参考）")
+               if mk.get("available") else "大盘：无数据")
     lines = [f"# 候选清单 — {st['label']} — 数据截至 {as_of}（美东收盘）", "",
              f"生成时间（UTC）：{payload['generated_at']}  ",
              f"股票池：{status.get('universe_size', '?')} 只，有数据 {len(all_rows)} 只，候选 {len(slim)} 只  ",
+             mk_line + "  ",
              f"全池回测（同一规则）：{sys_st['trades']} 笔，胜率 {fmt_pct(sys_st['win_rate'])}，盈亏比 {fmt(sys_st['payoff'])}，"
              f"单笔期望 {fmt_pct(sys_st['expectancy'], 2)}，平均持有 {fmt(sys_st['avg_days'], 1)} 天", "",
-             f"入场：{st['desc']}  ", f"出场：{exit_text(st)}  ",
-             f"胜率来自每只股票自身约 {LOOKBACK_YEARS - 1} 年的回测（含 {COST_RT * 100:.2f}% 往返成本）。排序用“修正胜率”= Wilson 95% 置信下界，"
-             f"样本越少向下修正越多（10 笔 10 胜 ≈ 72%）；笔数 < {MIN_TRADES} 另标注样本不足。", "",
-             f"| # | 代码 | 名称 | 状态 | 收盘 | ATR14 | {price_hdr} | 初始止损 | 止盈 | 每股风险 | 每$1万可买 | 修正胜率 | 原始胜率 | 笔数 | 盈亏比 | 单笔期望 | 平均持有天 | 模拟持仓 |",
-             "|--:|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|"]
-    for r in slim:
-        low = "⚠️样本不足 " if (r["bt_trades"] or 0) < MIN_TRADES else ""
-        sim = (f"持有中 {r['sim_entry_date']} 入场 {r['sim_entry']:.2f}，止损 {r['sim_stop']:.2f}" if r["sim_state"] == "long" else "")
-        lines.append(f"| {r['rank']} | **{r['ticker']}** | {r['name'][:22]} | {r['status']} | {r['close']:.2f} | {r['atr14']:.2f} | "
-                     f"{r['ref_price']:.2f} | {r['initial_stop']:.2f} | {fmt(r['target'])} | {r['risk_per_share']:.2f} | {r['shares_per_10k']} | "
-                     f"**{fmt_pct(r['bt_win_rate_lb'])}** | {low}{fmt_pct(r['bt_win_rate'])} | {r['bt_trades']} | {fmt(r['bt_payoff'])} | {fmt_pct(r['bt_expectancy'], 2)} | "
-                     f"{fmt(r['bt_avg_days'], 1)} | {sim} |")
+             f"入场：{st['desc']}  ", f"出场：{exit_text(st)}  "]
+    if is_mom:
+        pf = extra.get("portfolio", {})
+        lines += [f"下一个调仓日：{extra.get('next_rebalance')}（月末收盘后按当天排名执行，本表是“若今天是月末”的排名预览）  ",
+                  f"组合模拟（起始 ${START_EQUITY:,}，等权前 {MOM_TOP_N} 只）：年化 {fmt_pct(pf.get('cagr'))}，最大回撤 {fmt_pct(pf.get('max_dd'))}，"
+                  f"Sharpe {fmt(pf.get('sharpe'))}，{pf.get('start')} 起", "",
+                  "| # | 代码 | 名称 | 状态 | 收盘 | 12-1 动量 | ATR14 | 每$1万可买 | 模拟持仓 |", "|--:|---|---|---|--:|--:|--:|--:|---|"]
+        for r in slim:
+            sim = f"持有中 {r['sim_entry_date']} 入场 {r['sim_entry']:.2f}" if r["sim_state"] == "long" else ""
+            lines.append(f"| {r['rank']} | **{r['ticker']}** | {r['name'][:22]} | {r['status']} | {r['close']:.2f} | {fmt_pct(r['momentum_12_1'])} | "
+                         f"{r['atr14']:.2f} | {r['shares_per_10k']} | {sim} |")
+    else:
+        lines += [f"胜率来自每只股票自身约 {LOOKBACK_YEARS - 1} 年的回测（含 {COST_RT * 100:.2f}% 往返成本）。排序用“修正胜率”= Wilson 95% 置信下界，"
+                  f"样本越少向下修正越多（10 笔 10 胜 ≈ 72%）；笔数 < {MIN_TRADES} 另标注样本不足。", "",
+                  f"| # | 代码 | 名称 | 状态 | 收盘 | ATR14 | {price_hdr} | 初始止损 | 止盈 | 每股风险 | 每$1万可买 | 修正胜率 | 原始胜率 | 笔数 | 盈亏比 | 单笔期望 | 平均持有天 | 模拟持仓 |",
+                  "|--:|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|"]
+        for r in slim:
+            low = "⚠️样本不足 " if (r["bt_trades"] or 0) < MIN_TRADES else ""
+            sim = (f"持有中 {r['sim_entry_date']} 入场 {r['sim_entry']:.2f}，止损 {r['sim_stop']:.2f}" if r["sim_state"] == "long" else "")
+            lines.append(f"| {r['rank']} | **{r['ticker']}** | {r['name'][:22]} | {r['status']} | {r['close']:.2f} | {r['atr14']:.2f} | "
+                         f"{fmt(r['ref_price'])} | {fmt(r['initial_stop'])} | {fmt(r['target'])} | {fmt(r['risk_per_share'])} | {r['shares_per_10k']} | "
+                         f"**{fmt_pct(r['bt_win_rate_lb'])}** | {low}{fmt_pct(r['bt_win_rate'])} | {r['bt_trades']} | {fmt(r['bt_payoff'])} | {fmt_pct(r['bt_expectancy'], 2)} | "
+                         f"{fmt(r['bt_avg_days'], 1)} | {sim} |")
     if status.get("errors"):
         lines += ["", "## 运行提示", ""] + [f"- {e}" for e in status["errors"][:30]]
     (OUT_DIR / "latest.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -694,18 +1053,39 @@ def run_lab(uni: pd.DataFrame, prices: dict[str, pd.DataFrame], status: dict) ->
             except Exception as e:  # noqa
                 status["errors"].append(f"{t} 指标计算失败: {e!r}")
     as_of = pd.Series([str(d.index[-1].date()) for d in ind.values()]).mode().iloc[0]
-    results = {}
+    closes, opens = price_matrix(ind, "Close"), price_matrix(ind, "Open")
+    start = common_start(ind, closes)
+    cal = closes.index[closes.index >= start]
+    # 基准：SPY 买入持有（拿不到 SPY 时用等权代理指数）
+    bench = buy_and_hold(MARKET_CLOSE, cal) if MARKET_CLOSE is not None else None
+    bench_m = curve_metrics(bench) if bench is not None else None
+    results, curves = {}, {}
     for name, st in STRATEGIES.items():
-        all_trades, per_ticker, cand_today = [], [], 0
-        for t, d in ind.items():
-            trades, last = run_strategy(d, st)
-            all_trades += trades
-            s = stats(trades)
-            per_ticker.append({"ticker": t, **{k: v for k, v in s.items() if k != "reasons"}})
-            if bool(d.iloc[-1][st["signal"]]) or last["state"].startswith("pending"):
-                cand_today += 1
-        sys_st = stats(all_trades)
-        # 按年
+        if st.get("kind") == "momentum":
+            res = run_momentum(closes, opens, start, st)
+            all_trades = res["trades"]
+            sys_st = stats(all_trades)
+            per_ticker, cand_today = [], sum(1 for t, m in res["targets"][:MOM_TOP_N] if m > 0) if res["market_ok_today"] else 0
+            pf = res["metrics"]
+            curves[name] = res["equity"]
+        else:
+            all_trades, open_trades, per_ticker, cand_today = [], [], [], 0
+            for t, d in ind.items():
+                trades, last = run_strategy(d, st, t)
+                all_trades += trades
+                if last["open_trade"] is not None:
+                    open_trades.append(last["open_trade"])
+                s = stats(trades)
+                per_ticker.append({"ticker": t, **{k: v for k, v in s.items() if k != "reasons"}})
+                sig_today = bool(d.iloc[-1][st["signal"]]) and (not st.get("regime") or bool(market_flags(d.index[-1:])[0]))
+                if sig_today or last["state"].startswith("pending"):
+                    cand_today += 1
+            all_trades = [tr for tr in all_trades if pd.Timestamp(tr.entry_date) >= start]   # 单笔统计也用同一起点
+            sys_st = stats(all_trades)
+            sim = simulate_portfolio(all_trades + open_trades, closes, start)                 # 未平仓的按末日收盘计入市值
+            pf = sim["metrics"]
+            curves[name] = sim["equity"]
+        # 按年（单笔口径）
         by_year = {}
         for tr in all_trades:
             by_year.setdefault(tr.entry_date[:4], []).append(tr)
@@ -716,8 +1096,9 @@ def run_lab(uni: pd.DataFrame, prices: dict[str, pd.DataFrame], status: dict) ->
                      key=lambda p: (-(p["win_rate_lb"] or 0), -(p["payoff"] or 0)))[:15]
         years = max((len(d) for d in ind.values()), default=250) / 252
         results[name] = {
-            "label": st["label"], "desc": st["desc"], "exit": exit_text(st),
+            "label": st["label"], "desc": st["desc"], "exit": exit_text(st), "kind": st.get("kind", "signal"),
             "system": sys_st,
+            "portfolio": pf,
             "trades_per_ticker_per_year": round(sys_st["trades"] / max(len(ind), 1) / max(years - 0.8, 0.5), 2),
             "tickers_ranked": len(wr),
             "median_ticker_win_rate": float(np.median(wr)) if wr else None,
@@ -727,37 +1108,85 @@ def run_lab(uni: pd.DataFrame, prices: dict[str, pd.DataFrame], status: dict) ->
             "top_tickers": top,
         }
     payload = {"as_of": as_of, "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-               "tickers": len(ind), "cost_rt": COST_RT, "min_trades": MIN_TRADES, "strategies": results, "status": status}
+               "tickers": len(ind), "cost_rt": COST_RT, "min_trades": MIN_TRADES,
+               "portfolio_rules": {"start_equity": START_EQUITY, "risk_pct": RISK_PCT, "max_positions": MAX_POSITIONS,
+                                   "start": str(start.date()), "end": str(cal[-1].date()) if len(cal) else None,
+                                   "market_source": status.get("market_source")},
+               "benchmark": bench_m, "strategies": results, "status": status}
     (OUT_DIR / "lab.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
+    # 资金曲线（月末采样）供画图
+    curves = {k: v for k, v in curves.items() if len(v)}
+    if curves:
+        cdf = pd.concat(curves, axis=1)
+        if bench is not None:
+            cdf[MARKET_SYMBOL] = bench
+        cdf.index = pd.DatetimeIndex(cdf.index)
+        cdf.resample("ME").last().round(2).to_csv(OUT_DIR / "lab_equity.csv", index_label="date", encoding="utf-8-sig")
+
+    def pf_row(label: str, m: dict, extra: str = "") -> str:
+        if not m or m.get("cagr") is None:
+            return f"| {label} | | | | | | | | | {extra} |"
+        return (f"| {label} | **{fmt_pct(m['cagr'])}** | {fmt_pct(m['max_dd'])} | {fmt(m['sharpe'])} | {fmt(m['calmar'])} | "
+                f"${m['final']:,.0f} | {m.get('trades_taken', '')} | {fmt(m.get('avg_positions'), 1)} | {fmt_pct(m.get('exposure'), 0)} | {extra} |")
 
     lines = [f"# 策略实验室 — 数据截至 {as_of}", "",
-             f"股票池 {len(ind)} 只，约 {LOOKBACK_YEARS - 1} 年回测窗口（所有策略同一起点），每笔扣往返成本 {COST_RT * 100:.2f}%。", "",
-             "| 策略 | 笔数 | 胜率 | 平均盈利 | 平均亏损 | 盈亏比 | 单笔期望 | 日均期望 | 利润因子 | 平均持有天 | 每票每年笔数 | 单票胜率中位数 | 胜率≥50%的票占比 | 今日候选 |",
-             "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
+             f"股票池 {len(ind)} 只，回测窗口 {payload['portfolio_rules']['start']} → {payload['portfolio_rules']['end']}（所有策略同一起点），"
+             f"每笔扣往返成本 {COST_RT * 100:.2f}%。", "",
+             "## 组合级资金曲线（这张表才是该看的）", "",
+             f"同一套资金规则：起始 ${START_EQUITY:,}；信号类策略每笔风险 = {RISK_PCT:.0%} × 当前净值，仓位 = 风险 ÷ 每股风险，"
+             f"单只不超过净值 {MAX_POS_FRAC:.0%}，不用融资，同时最多 {MAX_POSITIONS} 只，同日信号过多按信号强度择优；"
+             f"数据末尾未平仓的按末日收盘计入市值。动量策略等权持有前 {MOM_TOP_N} 只（新进的每只 ≤ 净值/{MOM_TOP_N}）。"
+             f"基准 = {status.get('market_source', MARKET_SYMBOL)} 买入持有。", "",
+             "| 策略 | 年化 | 最大回撤 | Sharpe | Calmar | 终值 | 成交笔数 | 平均持仓数 | 平均敞口 | 备注 |",
+             "|---|--:|--:|--:|--:|--:|--:|--:|--:|---|"]
+    if bench_m:
+        lines.append(pf_row(f"**基准：{MARKET_SYMBOL} 买入持有**", bench_m, "不交易"))
+    for name, r in results.items():
+        m = r["portfolio"]
+        note = []
+        if m.get("skipped_no_slot"):
+            note.append(f"因持仓已满跳过 {m['skipped_no_slot']} 笔")
+        if m.get("skipped_no_cash"):
+            note.append(f"因现金不足跳过 {m['skipped_no_cash']} 笔")
+        lines.append(pf_row(r["label"], m, "；".join(note)))
+    years_all = sorted({y for r in results.values() for y in r["portfolio"].get("yearly", {})} |
+                       (set(bench_m["yearly"]) if bench_m else set()))
+    lines += ["", "### 分年收益（组合口径，首年/末年为不完整年份）", "",
+              "| 策略 | " + " | ".join(years_all) + " |", "|---|" + "--:|" * len(years_all)]
+    if bench_m:
+        lines.append(f"| {MARKET_SYMBOL} 买入持有 | " + " | ".join(fmt_pct(bench_m["yearly"].get(y)) for y in years_all) + " |")
+    for name, r in results.items():
+        yy = r["portfolio"].get("yearly", {})
+        lines.append(f"| {r['label']} | " + " | ".join(fmt_pct(yy.get(y)) for y in years_all) + " |")
+    lines += ["", "## 单笔统计（每个信号都成交、不受资金限制的口径）", "",
+              "| 策略 | 笔数 | 胜率 | 平均盈利 | 平均亏损 | 盈亏比 | 单笔期望 | 日均期望 | 利润因子 | 平均持有天 | 每票每年笔数 | 单票胜率中位数 | 胜率≥50%的票占比 | 今日候选 |",
+              "|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|"]
     for name, r in results.items():
         s = r["system"]
         lines.append(f"| **{r['label']}** | {s['trades']} | {fmt_pct(s['win_rate'])} | {fmt_pct(s['avg_win'], 2)} | {fmt_pct(s['avg_loss'], 2)} | "
                      f"{fmt(s['payoff'])} | {fmt_pct(s['expectancy'], 2)} | {fmt_pct(s['exp_per_day'], 3)} | {fmt(s['profit_factor'])} | "
                      f"{fmt(s['avg_days'], 1)} | {r['trades_per_ticker_per_year']} | {fmt_pct(r['median_ticker_win_rate'])} | "
                      f"{fmt_pct(r['pct_tickers_wr_ge_50'], 0)} | {r['candidates_today']} |")
-    lines += ["", "## 分年表现（按入场年份）", ""]
-    years_all = sorted({y for r in results.values() for y in r["yearly"]})
-    lines.append("| 策略 | " + " | ".join(years_all) + " |")
-    lines.append("|---|" + "---|" * len(years_all))
+    lines += ["", "### 分年表现（单笔口径，按入场年份）", ""]
+    years_t = sorted({y for r in results.values() for y in r["yearly"]})
+    lines.append("| 策略 | " + " | ".join(years_t) + " |")
+    lines.append("|---|" + "---|" * len(years_t))
     for name, r in results.items():
         cells = []
-        for y in years_all:
+        for y in years_t:
             yy = r["yearly"].get(y)
             cells.append(f"{yy['trades']}笔 胜率{fmt_pct(yy['win_rate'], 0)} 期望{fmt_pct(yy['expectancy'], 2)}" if yy else "")
         lines.append(f"| {r['label']} | " + " | ".join(cells) + " |")
     lines += ["", "## 出场原因分布", ""]
     for name, r in results.items():
         lines.append(f"- {r['label']}：" + "，".join(f"{k} {v}" for k, v in r["system"]["reasons"].items()))
-    lines += ["", "## 各策略修正胜率最高的股票（Wilson 下界，笔数 ≥ 8）", ""]
+    lines += ["", "## 各策略修正胜率最高的股票（Wilson 下界，笔数 ≥ 8；仅供参考，单票样本太少不建议据此选股）", ""]
     for name, r in results.items():
-        lines.append(f"**{r['label']}**：" + "，".join(f"{p['ticker']} 修正{fmt_pct(p['win_rate_lb'], 0)}/原始{fmt_pct(p['win_rate'], 0)}({p['trades']}笔, 盈亏比{fmt(p['payoff'], 1)})" for p in r["top_tickers"][:10]))
-        lines.append("")
+        if r["top_tickers"]:
+            lines.append(f"**{r['label']}**：" + "，".join(f"{p['ticker']} 修正{fmt_pct(p['win_rate_lb'], 0)}/原始{fmt_pct(p['win_rate'], 0)}({p['trades']}笔, 盈亏比{fmt(p['payoff'], 1)})" for p in r["top_tickers"][:10]))
+            lines.append("")
     lines += ["## 策略定义", ""] + [f"- **{r['label']}**：{r['desc']}。出场：{r['exit']}" for r in results.values()]
+    lines += ["", "资金曲线（月末采样）见 `output/lab_equity.csv`。"]
     (OUT_DIR / "lab.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return payload
 
@@ -801,52 +1230,78 @@ def main() -> int:
     try:
         if args.sample:
             uni, prices = load_local_samples(Path(args.sample))
+            uni = uni[uni["ticker"] != MARKET_SYMBOL].reset_index(drop=True)
             status["universe_size"] = len(uni)
         else:
             uni = load_universe(status)
             if args.limit:
                 uni = uni.head(args.limit)
             tickers = uni["ticker"].tolist()
-            prices = fetch_yfinance(tickers, status)
-            missing = [t for t in tickers if t not in prices]
+            prices = fetch_yfinance([MARKET_SYMBOL] + tickers, status)
+            missing = [t for t in [MARKET_SYMBOL] + tickers if t not in prices]   # SPY 排最前，保证兜底时一定重试
             if missing:
                 status["errors"].append(f"yfinance 缺 {len(missing)} 只，尝试 stooq 兜底")
                 prices.update(fetch_stooq(missing, status))
             status["missing"] = [t for t in tickers if t not in prices]
+        build_market(prices, status)          # SPY（或代理指数）→ 大盘过滤器 / 基准
+        prices.pop(MARKET_SYMBOL, None)       # SPY 只做大盘，不进股票池
         status["priced"] = len(prices)
 
         if args.lab:
             payload = run_lab(uni, prices, status)
             status["elapsed_sec"] = round(time.time() - t0, 1)
             (OUT_DIR / "lab_status.json").write_text(json.dumps(status, ensure_ascii=False, indent=1), encoding="utf-8")
+            if payload.get("benchmark"):
+                b = payload["benchmark"]
+                print(f"{'benchmark':16s} cagr={fmt_pct(b['cagr'])} maxdd={fmt_pct(b['max_dd'])} sharpe={fmt(b['sharpe'])}")
             for name, r in payload["strategies"].items():
-                s = r["system"]
-                print(f"{name:14s} trades={s['trades']:6d} win={fmt_pct(s['win_rate'])} payoff={fmt(s['payoff'])} "
-                      f"exp={fmt_pct(s['expectancy'], 2)} days={fmt(s['avg_days'], 1)} cand={r['candidates_today']}")
+                s, p = r["system"], r["portfolio"]
+                print(f"{name:16s} trades={s['trades']:6d} win={fmt_pct(s['win_rate'])} payoff={fmt(s['payoff'])} "
+                      f"exp={fmt_pct(s['expectancy'], 2)} | cagr={fmt_pct(p.get('cagr'))} maxdd={fmt_pct(p.get('max_dd'))} "
+                      f"sharpe={fmt(p.get('sharpe'))} taken={p.get('trades_taken')} cand={r['candidates_today']}")
             return 0
 
-        rows = []
-        for _, m in uni.iterrows():
-            t = m["ticker"]
-            if t not in prices:
-                continue
-            try:
-                r = analyze(t, m.to_dict(), add_indicators(prices[t]), strat_name)
-                if r:
-                    rows.append(r)
-            except Exception as e:  # noqa
-                status["errors"].append(f"{t} 计算失败: {e!r}")
-        if not rows:
-            raise RuntimeError("没有任何股票完成计算")
-        dates = pd.Series([r["as_of"] for r in rows])
-        as_of = dates.mode().iloc[0]
-        stale = [r["ticker"] for r in rows if r["as_of"] != as_of]
-        if stale:
-            status["errors"].append(f"{len(stale)} 只数据日期 ≠ {as_of}，已排除候选: {', '.join(stale[:20])}")
-        cands = sorted([r for r in rows if r["candidate"] and r["as_of"] == as_of], key=rank_key)
+        rows, extra = [], None
+        if STRATEGIES[strat_name].get("kind") == "momentum":
+            ind = {}
+            for _, m in uni.iterrows():
+                t = m["ticker"]
+                if t in prices:
+                    try:
+                        d = add_indicators(prices[t])
+                        if d["valid"].any():
+                            ind[t] = d
+                    except Exception as e:  # noqa
+                        status["errors"].append(f"{t} 指标计算失败: {e!r}")
+            if not ind:
+                raise RuntimeError("没有任何股票完成计算")
+            rows, extra = analyze_momentum(uni, ind, strat_name, status)
+            as_of = pd.Series([str(d.index[-1].date()) for d in ind.values()]).mode().iloc[0]
+            cands = [r for r in rows if r["candidate"] and r["as_of"] == as_of]
+            # 让 system_stats 的分母 = 有数据的股票数
+            rows = rows + [{"_trades": [], "as_of": as_of} for _ in range(max(0, len(ind) - len(rows)))]
+        else:
+            for _, m in uni.iterrows():
+                t = m["ticker"]
+                if t not in prices:
+                    continue
+                try:
+                    r = analyze(t, m.to_dict(), add_indicators(prices[t]), strat_name)
+                    if r:
+                        rows.append(r)
+                except Exception as e:  # noqa
+                    status["errors"].append(f"{t} 计算失败: {e!r}")
+            if not rows:
+                raise RuntimeError("没有任何股票完成计算")
+            dates = pd.Series([r["as_of"] for r in rows])
+            as_of = dates.mode().iloc[0]
+            stale = [r["ticker"] for r in rows if r["as_of"] != as_of]
+            if stale:
+                status["errors"].append(f"{len(stale)} 只数据日期 ≠ {as_of}，已排除候选: {', '.join(stale[:20])}")
+            cands = sorted([r for r in rows if r["candidate"] and r["as_of"] == as_of], key=rank_key)
         status["as_of"] = as_of
         status["elapsed_sec"] = round(time.time() - t0, 1)
-        write_outputs(cands, rows, status, as_of, strat_name)
+        write_outputs(cands, rows, status, as_of, strat_name, extra)
         print(f"strategy={strat_name} as_of={as_of} universe={status.get('universe_size')} priced={len(prices)} "
               f"candidates={len(cands)} elapsed={status['elapsed_sec']}s errors={len(status['errors'])}")
         return 0
