@@ -1,23 +1,25 @@
 {
- "started_at": "2026-10-01T00:31:17+00:00",
+ "started_at": "2026-10-08T06:17:40+00:00",
  "errors": [
   "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
   "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
   "纳斯达克 100 名单全部来源失败，使用内置兜底名单",
-  "yfinance 缺 1 只，尝试 stooq 兜底"
+  "yfinance 缺 3 只，尝试 stooq 兜底"
  ],
  "missing": [
-  "EA"
+  "EA",
+  "PSKY",
+  "WBD"
  ],
  "strategy": "bb_revert",
  "mode": "daily",
  "sp500_count": 503,
- "ndx_wikipedia_bytes": 209715,
+ "ndx_wikipedia_bytes": 209983,
  "ndx_wikipedia_tables": [
   "11x2:0|1",
   "2x3:Category|All-Time Hig|All-Time Hig",
   "41x4:Year|Closing leve|Change in In|Change in In",
-  "30x3:Milestone (c|Date of Reco|Trading Days",
+  "31x3:Milestone (c|Date of Reco|Trading Days",
   "3x3:Milestone (c|Date of Reco|Trading Days",
   "1x2:vteList of N|vteList of N",
   "4x3:vteNasdaq, I|vteNasdaq, I|vteNasdaq, I",
@@ -31,7 +33,7 @@
  "ndx_count": 100,
  "universe_size": 517,
  "market_source": "SPY",
- "priced": 516,
- "as_of": "2026-09-29",
- "elapsed_sec": 63.7
+ "priced": 514,
+ "as_of": "2026-10-07",
+ "elapsed_sec": 54.5
 }
