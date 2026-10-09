@@ -1,6 +1,6 @@
 # 候选清单 — 布林带回归 — 数据截至 2026-10-07（美东收盘）
 
-生成时间（UTC）：2026-10-08T06:18:35+00:00  
+生成时间（UTC）：2026-10-09T01:13:40+00:00  
 股票池：517 只，有数据 512 只，候选 5 只  
 大盘：SPY 2026-10-07 收盘 777.22，200 日均线 721.99，在均线之上 ✅（本策略不带过滤，仅供参考）  
 全池回测（同一规则）：3812 笔，胜率 64.2%，盈亏比 0.77，单笔期望 0.78%，平均持有 9.3 天
@@ -23,3 +23,6 @@
 - 纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')
 - 纳斯达克 100 名单全部来源失败，使用内置兜底名单
 - yfinance 缺 3 只，尝试 stooq 兜底
+- stooq EA: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=ea.us&i=d&d1=20221009 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7f0c94c3eb70>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))
+- stooq PSKY: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=psky.us&i=d&d1=20221009 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7f0c94b033b0>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))
+- stooq WBD: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=wbd.us&i=d&d1=20221009 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7f0c94b3b290>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))
