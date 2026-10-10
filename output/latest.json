@@ -1,6 +1,6 @@
 {
  "as_of": "2026-10-08",
- "generated_at": "2026-10-09T08:11:49+00:00",
+ "generated_at": "2026-10-10T00:45:16+00:00",
  "strategy": "bb_revert",
  "strategy_label": "布林带回归",
  "strategy_desc": "收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天",
@@ -135,12 +135,13 @@
   }
  ],
  "status": {
-  "started_at": "2026-10-09T08:10:42+00:00",
+  "started_at": "2026-10-10T00:44:13+00:00",
   "errors": [
    "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
    "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
    "纳斯达克 100 名单全部来源失败，使用内置兜底名单",
-   "yfinance 缺 3 只，尝试 stooq 兜底"
+   "yfinance 缺 3 只，尝试 stooq 兜底",
+   "1 只数据日期 ≠ 2026-10-08，已排除候选: HUBB"
   ],
   "missing": [
    "EA",
@@ -150,7 +151,7 @@
   "strategy": "bb_revert",
   "mode": "daily",
   "sp500_count": 503,
-  "ndx_wikipedia_bytes": 209983,
+  "ndx_wikipedia_bytes": 209941,
   "ndx_wikipedia_tables": [
    "11x2:0|1",
    "2x3:Category|All-Time Hig|All-Time Hig",
@@ -171,6 +172,6 @@
   "market_source": "SPY",
   "priced": 515,
   "as_of": "2026-10-08",
-  "elapsed_sec": 66.5
+  "elapsed_sec": 62.4
  }
 }

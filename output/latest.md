@@ -1,6 +1,6 @@
 # 候选清单 — 布林带回归 — 数据截至 2026-10-08（美东收盘）
 
-生成时间（UTC）：2026-10-09T08:11:49+00:00  
+生成时间（UTC）：2026-10-10T00:45:16+00:00  
 股票池：518 只，有数据 513 只，候选 2 只  
 大盘：SPY 2026-10-08 收盘 773.93，200 日均线 722.46，在均线之上 ✅（本策略不带过滤，仅供参考）  
 全池回测（同一规则）：3818 笔，胜率 64.1%，盈亏比 0.77，单笔期望 0.78%，平均持有 9.3 天
@@ -20,3 +20,4 @@
 - 纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')
 - 纳斯达克 100 名单全部来源失败，使用内置兜底名单
 - yfinance 缺 3 只，尝试 stooq 兜底
+- 1 只数据日期 ≠ 2026-10-08，已排除候选: HUBB
