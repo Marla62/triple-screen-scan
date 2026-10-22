@@ -1,2 +1,2 @@
 ﻿rank,ticker,name,sector,index,strategy,status,signal_date,close,high,atr14,atr_pct,entry_mode,buy_stop,ref_price,initial_stop,target,risk_per_share,shares_per_10k,bt_win_rate_lb,bt_win_rate,bt_trades,bt_wins,bt_payoff,bt_expectancy,bt_profit_factor,bt_avg_days,rsi2,w_hist_up,fi2,momentum_12_1,mom_rank
-1,DXCM,Dexcom,Health Care,SPX+NDX,bb_revert,新信号,2026-10-21,80.26,86.17,2.628,3.27,next_open,,80.26,72.38,,7.884,25,0.5291051942301385,0.875,8,7,0.6111733691144673,0.03018356088015356,4.278213583801271,10.25,4.5,False,-29389697.0,,
+1,DXCM,Dexcom,Health Care,SPX+NDX,bb_revert,新信号,2026-10-21,80.26,86.17,2.628,3.27,next_open,,80.26,72.38,,7.884,25,0.5291051942301385,0.875,8,7,0.6111733691144673,0.03018356088015356,4.278213583801271,10.25,4.5,False,-29430165.0,,
