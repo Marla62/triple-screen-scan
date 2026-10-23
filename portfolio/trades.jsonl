@@ -1,0 +1,9 @@
+{"executed_at": "2026-09-28T13:30:03Z", "symbol": "IBKR", "side": "SELL", "quantity": 30, "price": 87.76, "currency": "USD", "commission": 0.41643293, "realized_pnl": -88.05478}
+{"executed_at": "2026-09-28T13:38:54Z", "symbol": "META", "side": "SELL", "quantity": 1, "price": 720.78, "currency": "USD", "commission": 0.36550332, "realized_pnl": 170.365557}
+{"executed_at": "2026-09-28T13:38:54Z", "symbol": "META", "side": "SELL", "quantity": 1, "price": 720.7802, "currency": "USD", "commission": 0.01524607, "realized_pnl": 170.716014}
+{"executed_at": "2026-09-28T14:41:10Z", "symbol": "SNDK", "side": "SELL", "quantity": 1, "price": 1672.45, "currency": "USD", "commission": 0.38510772, "realized_pnl": -88.286568}
+{"executed_at": "2026-10-07T13:30:06Z", "symbol": "MU", "side": "SELL", "quantity": 3, "price": 1014.5, "currency": "USD", "commission": 0.42256235, "realized_pnl": 82.887572}
+{"executed_at": "2026-10-08T08:39:12Z", "symbol": "NVDA", "side": "BUY", "quantity": 2, "price": 236.3, "currency": "USD", "commission": 0.35066325, "realized_pnl": 0}
+{"executed_at": "2026-10-09T14:34:54Z", "symbol": "GRMN", "side": "BUY", "quantity": 1, "price": 268.5, "currency": "USD", "commission": 0.34726025, "realized_pnl": 0}
+{"executed_at": "2026-10-19T15:03:00Z", "symbol": "GRMN", "side": "SELL", "quantity": 1, "price": 284.82, "currency": "USD", "commission": 0.356328, "realized_pnl": 15.616372}
+{"executed_at": "2026-10-20T09:06:19Z", "symbol": "PANW", "side": "BUY", "quantity": 1, "price": 345.79, "currency": "USD", "commission": 0.35346, "realized_pnl": 0}

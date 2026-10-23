@@ -73,3 +73,7 @@ python scan.py --lab --sample ./csvdir  # 用本地 CSV（每只一个文件，�
 - 组合模拟里“同日信号择优”和“现金不足跳过”会让结果依赖于具体路径，换一批股票或换起点数字会变；把它当量级参考，不要当精确预测。
 - 数据来自 Yahoo Finance（yfinance），偶尔会缺票或延迟，`status.json` 里会列出；SPY 拿不到时大盘过滤器改用股票池等权代理指数。
 - 若把 `config.json` 切到 `mom_12_1`，每日报告的字段含义会变（`entry_mode = "monthly"`，无止损），读报告的一方需要相应调整。
+
+## 真实持仓与手动日报
+
+新会话读取 [portfolio/README.md](portfolio/README.md)，持仓快照在 [portfolio/latest.json](portfolio/latest.json)，模板在 [portfolio/REPORT_TEMPLATE.md](portfolio/REPORT_TEMPLATE.md)。这些是独立实盘记录，和 output 中的回测/模拟仓分开。用户手动运行Actions后要求日报时，助手刷新记录并提交推送；已取消本机扫描及Codex定时日报。

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "record_type": "real_brokerage_snapshot",
+  "observed_at_utc": "2026-10-23 03:22:07 UTC",
+  "report_date": "2026-10-23",
+  "source": "IBKR read-only query",
+  "account": {
+    "currency": "USD",
+    "net_liquidation": 18118.08,
+    "cash": 17338.38
+  },
+  "positions": [
+    {
+      "symbol": "NVDA",
+      "quantity": 2,
+      "currency": "USD",
+      "average_cost_including_fees": 236.47535,
+      "quote": 213.6100006,
+      "market_value": 427.2200012,
+      "unrealized_pnl": -45.7306988,
+      "allocation": "long_term_growth",
+      "allocation_confirmed": true,
+      "allocation_evidence": "User confirmed 2026-10-20",
+      "entry_atr": null
+    },
+    {
+      "symbol": "PANW",
+      "quantity": 1,
+      "currency": "USD",
+      "average_cost_including_fees": 346.1435,
+      "quote": 355,
+      "market_value": 355,
+      "unrealized_pnl": 8.8565,
+      "allocation": null,
+      "allocation_confirmed": false,
+      "allocation_evidence": "Prior suggested bb_revert plan exists; user has not confirmed adoption",
+      "entry_atr": null
+    }
+  ],
+  "working_orders": [
+    {
+      "symbol": "PANW",
+      "side": "SELL",
+      "quantity": 1,
+      "type": "STOP",
+      "stop_price": 289.83,
+      "time_in_force": "GTC",
+      "status": "NEW",
+      "submitted_at": "2026-10-21T05:42:31Z"
+    }
+  ],
+  "notes": [
+    "Queries are not simultaneous; account and per-position valuations may differ.",
+    "No orders were submitted or changed by the assistant.",
+    "PANW suggested pre-entry ATR: 18.654 as of 2026-10-19, project EWM method; not a confirmed adopted entry parameter.",
+    "Trade history covers a rolling 30-day window; not complete lifetime history.",
+    "Missing strategy or ATR values remain null; simulation positions are excluded."
+  ]
+}

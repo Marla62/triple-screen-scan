@@ -1,0 +1,35 @@
+{
+  "confirmed_on": "2026-10-20",
+  "target_allocation": {
+    "long_term": 0.4,
+    "medium_term": 0.225,
+    "short_term": 0.15,
+    "cash": 0.225
+  },
+  "planned_risk_limits": {
+    "medium_trade": 0.005,
+    "short_trade": 0.006,
+    "active_total": 0.02
+  },
+  "single_symbol_cap": 0.1,
+  "initial_long_term_symbol_cap": 0.05,
+  "margin": false,
+  "annual_return_goal": 0.4,
+  "goal_is_guarantee": false,
+  "personal_drawdown_tolerance": null,
+  "pause_active_new_entries": {
+    "monthly_trading_loss": 0.03,
+    "flow_adjusted_peak_drawdown": 0.05
+  },
+  "withdrawals": {
+    "fixed_amount": null,
+    "track_separately_from_returns": true
+  },
+  "strategy_exits": {
+    "long_term_growth": "Review fundamentals, valuation and thesis; approximately half-yearly; no automatic ATR exit.",
+    "triple_screen": "Initial and monotonic trailing stop: 2 x fixed entry ATR.",
+    "bb_revert": "Fixed 3 x entry ATR; close >= current SMA20 exits next regular open; entry day count 0, 15 subsequent sessions then next-open exit.",
+    "mom_12_1": "Month-end ranking, next-open rebalance; SPY/SMA200 filter; no ATR stop."
+  },
+  "atr_method": "Project TR.ewm(alpha=1/14, adjust=False); differs from strict Wilder initialization."
+}
