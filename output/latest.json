@@ -1,6 +1,6 @@
 {
  "as_of": "2026-10-23",
- "generated_at": "2026-10-26T06:16:20+00:00",
+ "generated_at": "2026-10-27T00:23:38+00:00",
  "strategy": "bb_revert",
  "strategy_label": "布林带回归",
  "strategy_desc": "收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天",
@@ -21,19 +21,19 @@
   "cost": "回测每笔扣往返成本 0.05%"
  },
  "system_stats": {
-  "trades": 3783,
-  "wins": 2454,
-  "win_rate": 0.6486915146708961,
-  "win_rate_lb": 0.6333351172087515,
-  "avg_win": 0.045023539777384526,
-  "avg_loss": -0.0587921038197189,
-  "payoff": 0.7658092983956735,
-  "expectancy": 0.008552223271820036,
-  "profit_factor": 1.4140677338321916,
-  "avg_days": 9.2294475284166,
-  "exp_per_day": 0.0009264908544471707,
+  "trades": 3781,
+  "wins": 2452,
+  "win_rate": 0.6485056863263687,
+  "win_rate_lb": 0.6331435396173949,
+  "avg_win": 0.04504689350113687,
+  "avg_loss": -0.058786980706857096,
+  "payoff": 0.7662732965614352,
+  "expectancy": 0.008549877150323865,
+  "profit_factor": 1.4137713492615793,
+  "avg_days": 9.227453054747421,
+  "exp_per_day": 0.0009264367944453067,
   "reasons": {
-   "cond": 2493,
+   "cond": 2491,
    "stop": 739,
    "time": 551
   },
@@ -309,17 +309,17 @@
    "bt_win_rate": 0.4444444444444444,
    "bt_win_rate_lb": 0.188775429471914,
    "bt_avg_win": 0.026029928412042935,
-   "bt_avg_loss": -0.039445580306243,
-   "bt_payoff": 0.6598946753972134,
-   "bt_expectancy": -0.010345354209227029,
-   "bt_profit_factor": 0.5279157403177707,
+   "bt_avg_loss": -0.03944558030624171,
+   "bt_payoff": 0.6598946753972349,
+   "bt_expectancy": -0.010345354209226313,
+   "bt_profit_factor": 0.5279157403177879,
    "bt_avg_days": 10.222222222222221,
-   "bt_exp_per_day": -0.0010120455204678616,
+   "bt_exp_per_day": -0.0010120455204677915,
    "rank": 6
   }
  ],
  "status": {
-  "started_at": "2026-10-26T06:15:25+00:00",
+  "started_at": "2026-10-27T00:22:33+00:00",
   "errors": [
    "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
    "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
@@ -334,7 +334,7 @@
   "strategy": "bb_revert",
   "mode": "daily",
   "sp500_count": 503,
-  "ndx_wikipedia_bytes": 226062,
+  "ndx_wikipedia_bytes": 226064,
   "ndx_wikipedia_tables": [
    "11x2:0|1",
    "2x3:Category|All-Time Hig|All-Time Hig",
@@ -355,6 +355,6 @@
   "market_source": "SPY",
   "priced": 515,
   "as_of": "2026-10-23",
-  "elapsed_sec": 54.6
+  "elapsed_sec": 64.3
  }
 }
