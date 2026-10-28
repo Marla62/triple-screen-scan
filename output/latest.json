@@ -1,6 +1,6 @@
 {
  "as_of": "2026-10-26",
- "generated_at": "2026-10-27T02:30:25+00:00",
+ "generated_at": "2026-10-28T00:28:39+00:00",
  "strategy": "bb_revert",
  "strategy_label": "布林带回归",
  "strategy_desc": "收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天",
@@ -21,21 +21,21 @@
   "cost": "回测每笔扣往返成本 0.05%"
  },
  "system_stats": {
-  "trades": 3782,
-  "wins": 2453,
-  "win_rate": 0.6485986250661026,
-  "win_rate_lb": 0.6332393533882857,
-  "avg_win": 0.045071637158522006,
-  "avg_loss": -0.058786980706857096,
-  "payoff": 0.7666942002562263,
-  "expectancy": 0.008575576041893549,
-  "profit_factor": 1.4151248105556984,
-  "avg_days": 9.226335272342675,
-  "exp_per_day": 0.0009293340379506977,
+  "trades": 3772,
+  "wins": 2446,
+  "win_rate": 0.6484623541887593,
+  "win_rate_lb": 0.6330813431304568,
+  "avg_win": 0.045129889256590006,
+  "avg_loss": -0.058781230934904886,
+  "payoff": 0.7677601938375098,
+  "expectancy": 0.00860121869086301,
+  "profit_factor": 1.4162454254348031,
+  "avg_days": 9.217921527041357,
+  "exp_per_day": 0.0009329632466408418,
   "reasons": {
-   "cond": 2492,
-   "stop": 739,
-   "time": 551
+   "cond": 2483,
+   "stop": 736,
+   "time": 553
   },
   "tickers_with_data": 513
  },
@@ -79,23 +79,22 @@
    "bt_win_rate": 0.5,
    "bt_win_rate_lb": 0.15003570882017145,
    "bt_avg_win": 0.056398015572545146,
-   "bt_avg_loss": -0.035551031210992956,
-   "bt_payoff": 1.5863960524190355,
-   "bt_expectancy": 0.010423492180776095,
-   "bt_profit_factor": 1.5863960524190355,
+   "bt_avg_loss": -0.035551031211012385,
+   "bt_payoff": 1.5863960524181684,
+   "bt_expectancy": 0.01042349218076638,
+   "bt_profit_factor": 1.5863960524181684,
    "bt_avg_days": 7.25,
-   "bt_exp_per_day": 0.0014377230594173924,
+   "bt_exp_per_day": 0.0014377230594160525,
    "rank": 1
   }
  ],
  "status": {
-  "started_at": "2026-10-27T02:29:12+00:00",
+  "started_at": "2026-10-28T00:27:40+00:00",
   "errors": [
    "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
    "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
    "纳斯达克 100 名单全部来源失败，使用内置兜底名单",
-   "yfinance 缺 3 只，尝试 stooq 兜底",
-   "1 只数据日期 ≠ 2026-10-26，已排除候选: HUBB"
+   "yfinance 缺 3 只，尝试 stooq 兜底"
   ],
   "missing": [
    "EA",
@@ -126,6 +125,6 @@
   "market_source": "SPY",
   "priced": 515,
   "as_of": "2026-10-26",
-  "elapsed_sec": 72.9
+  "elapsed_sec": 59.1
  }
 }
