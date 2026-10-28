@@ -1,59 +1,367 @@
 {
   "schema_version": 1,
   "record_type": "real_brokerage_snapshot",
-  "observed_at_utc": "2026-10-23 03:22:07 UTC",
-  "report_date": "2026-10-23",
-  "source": "IBKR read-only query",
+  "observed_at_utc": "2026-10-28T08:22:17Z",
+  "report_date": "2026-10-28",
+  "source": "IBKR read-only queries; account/positions queried approximately 08:20 UTC; market/history/performance separately",
   "account": {
     "currency": "USD",
-    "net_liquidation": 18118.08,
-    "cash": 17338.38
+    "net_liquidation": 18170.48,
+    "equity_with_loan_value": 18168.28,
+    "buying_power": 72093.3,
+    "gross_position_value": 439.26,
+    "total_cash_value": 17729.02,
+    "available_funds": 18023.32,
+    "initial_margin": 144.96,
+    "maintenance_margin": 131.78,
+    "excess_liquidity": 18036.5,
+    "dividends": 0,
+    "leverage": "0.02"
   },
-  "positions": [
+  "balances": [
     {
-      "symbol": "NVDA",
-      "quantity": 2,
-      "currency": "USD",
-      "average_cost_including_fees": 236.47535,
-      "quote": 213.6100006,
-      "market_value": 427.2200012,
-      "unrealized_pnl": -45.7306988,
-      "allocation": "long_term_growth",
-      "allocation_confirmed": true,
-      "allocation_evidence": "User confirmed 2026-10-20",
-      "entry_atr": null
+      "currency": "BASE",
+      "cash_balance": 17729.02,
+      "settled_cash": 17729.02,
+      "net_liquidation_value": 18170.48,
+      "stock_market_value": 439.26,
+      "unrealized_pnl": -33.69,
+      "realized_pnl": 0,
+      "exchange_rate": 1
     },
     {
-      "symbol": "PANW",
-      "quantity": 1,
       "currency": "USD",
-      "average_cost_including_fees": 346.1435,
-      "quote": 355,
-      "market_value": 355,
-      "unrealized_pnl": 8.8565,
-      "allocation": null,
-      "allocation_confirmed": false,
-      "allocation_evidence": "Prior suggested bb_revert plan exists; user has not confirmed adoption",
-      "entry_atr": null
+      "cash_balance": 17729.02,
+      "settled_cash": 17729.02,
+      "net_liquidation_value": 18170.48,
+      "stock_market_value": 439.26,
+      "unrealized_pnl": -33.69,
+      "realized_pnl": 0,
+      "exchange_rate": 1
     }
   ],
-  "working_orders": [
+  "positions": [
     {
-      "symbol": "PANW",
-      "side": "SELL",
-      "quantity": 1,
-      "type": "STOP",
-      "stop_price": 289.83,
-      "time_in_force": "GTC",
-      "status": "NEW",
-      "submitted_at": "2026-10-21T05:42:31Z"
+      "contract_id": 4815747,
+      "contract_description": "NVDA",
+      "position": 2,
+      "market_price": 219.66000365,
+      "market_value": 439.3200073,
+      "currency": "USD",
+      "average_price": 236.47535,
+      "unrealized_pnl": -33.6306927,
+      "daily_pnl": 3.4400073,
+      "asset_class": "STK"
     }
+  ],
+  "orders": [
+    {
+      "order_id": 457153501,
+      "order_status": "EXPIRED",
+      "order_type": "LIMIT",
+      "side": "BUY",
+      "limit_price": "419.99",
+      "total_shares_qty": "1",
+      "cum_shares_qty": "0",
+      "remaining_shares_qty": "0",
+      "primary_description": "Buy 1 TSM",
+      "secondary_description": "Limit 419.99, Day",
+      "order_time": "2026-10-27T03:14:12Z"
+    }
+  ],
+  "performance": {
+    "method": "TWR",
+    "source_updated_at_raw": "2026-10-28 08:20:29",
+    "cutoff": "20261028",
+    "month_return": -0.00681925,
+    "daily_return": 0.00018596,
+    "completed_session_month_return": -0.00700391,
+    "completed_session_date": "20261027",
+    "current_month_peak_drawdown": -0.012068525098740346,
+    "year_validation": "unverified_discontinuity",
+    "year_abrupt_steps": [
+      {
+        "date": "20260729",
+        "day_return": -0.9516963669425207,
+        "nav": 26.50326443
+      }
+    ]
+  },
+  "quotes": {
+    "NVDA": {
+      "snapshot": {
+        "last": {
+          "price": 219.72,
+          "ts": 1793175197,
+          "halted": false,
+          "is_close": false
+        },
+        "change": {
+          "change": 1.7800000000000011,
+          "change_pct": 0.82
+        },
+        "prior-close": {},
+        "bid-ask": {
+          "bid": 219.6,
+          "bid_size": 3,
+          "ask": 219.70000000000002,
+          "ask_size": 5
+        }
+      },
+      "last_at_utc": "2026-10-28T08:13:17+00:00",
+      "regular_close": 217.94,
+      "regular_close_date": "2026-10-27",
+      "position_valuation_time": null
+    }
+  },
+  "scanner": {
+    "source": "GitHub main direct fetch; no local output or historical cache fallback",
+    "as_of": "2026-10-27",
+    "generated_at": "2026-10-28T07:29:57+00:00",
+    "fresh": true,
+    "strategy": "bb_revert",
+    "market": {
+      "available": true,
+      "symbol": "SPY",
+      "date": "2026-10-27",
+      "close": 769.66,
+      "sma200": 727.76,
+      "above_sma": true
+    },
+    "candidates": [
+      {
+        "ticker": "VLO",
+        "name": "Valero Energy",
+        "sector": "Energy",
+        "index": "SPX",
+        "strategy": "bb_revert",
+        "as_of": "2026-10-27",
+        "close": 387.34,
+        "high": 423.26,
+        "atr14": 18.682,
+        "atr_pct": 4.82,
+        "candidate": true,
+        "status": "新信号",
+        "signal_date": "2026-10-27",
+        "entry_mode": "next_open",
+        "entry_text": "次日开盘买入（参考价 = 收盘价）",
+        "buy_stop": null,
+        "ref_price": 387.34,
+        "initial_stop": 331.29,
+        "target": null,
+        "exit_text": "止损 = 入场价 − 3×ATR；收盘 ≥ 20 日均线(中轨) → 次日开盘卖出；最多持有 15 个交易日",
+        "risk_per_share": 56.046,
+        "shares_per_10k": 3,
+        "rsi2": 8.5,
+        "fi2": -131631552.0,
+        "w_hist_up": false,
+        "screen1": true,
+        "screen2": false,
+        "sim_state": "pending_open",
+        "sim_entry": null,
+        "sim_entry_date": null,
+        "sim_stop": null,
+        "bt_from": "2023-10-04",
+        "bt_trades": 5,
+        "bt_wins": 3,
+        "bt_win_rate": 0.6,
+        "bt_win_rate_lb": 0.23071993220883702,
+        "bt_avg_win": 0.07910667903754641,
+        "bt_avg_loss": -0.023906902731318347,
+        "bt_payoff": 3.3089472076997937,
+        "bt_expectancy": 0.037901246330000506,
+        "bt_profit_factor": 4.96342081154969,
+        "bt_avg_days": 12.6,
+        "bt_exp_per_day": 0.003008035423015913,
+        "rank": 1
+      },
+      {
+        "ticker": "SOLV",
+        "name": "Solventum",
+        "sector": "Health Care",
+        "index": "SPX",
+        "strategy": "bb_revert",
+        "as_of": "2026-10-27",
+        "close": 82.98,
+        "high": 85.81,
+        "atr14": 2.123,
+        "atr_pct": 2.56,
+        "candidate": true,
+        "status": "新信号",
+        "signal_date": "2026-10-27",
+        "entry_mode": "next_open",
+        "entry_text": "次日开盘买入（参考价 = 收盘价）",
+        "buy_stop": null,
+        "ref_price": 82.98,
+        "initial_stop": 76.61,
+        "target": null,
+        "exit_text": "止损 = 入场价 − 3×ATR；收盘 ≥ 20 日均线(中轨) → 次日开盘卖出；最多持有 15 个交易日",
+        "risk_per_share": 6.368,
+        "shares_per_10k": 31,
+        "rsi2": 9.7,
+        "fi2": -2635400.0,
+        "w_hist_up": false,
+        "screen1": false,
+        "screen2": false,
+        "sim_state": "pending_open",
+        "sim_entry": null,
+        "sim_entry_date": null,
+        "sim_stop": null,
+        "bt_from": "2025-02-24",
+        "bt_trades": 3,
+        "bt_wins": 2,
+        "bt_win_rate": 0.6666666666666666,
+        "bt_win_rate_lb": 0.20765495512648788,
+        "bt_avg_win": 0.05551033188237969,
+        "bt_avg_loss": -0.11411487861870279,
+        "bt_payoff": 0.48644254416515553,
+        "bt_expectancy": -0.0010314049513144667,
+        "bt_profit_factor": 0.9728850883303111,
+        "bt_avg_days": 3.3333333333333335,
+        "bt_exp_per_day": -0.00030942148539434,
+        "rank": 2
+      },
+      {
+        "ticker": "TGT",
+        "name": "Target Corporation",
+        "sector": "Consumer Staples",
+        "index": "SPX",
+        "strategy": "bb_revert",
+        "as_of": "2026-10-27",
+        "close": 148.01,
+        "high": 150.47,
+        "atr14": 4.291,
+        "atr_pct": 2.9,
+        "candidate": true,
+        "status": "新信号",
+        "signal_date": "2026-10-27",
+        "entry_mode": "next_open",
+        "entry_text": "次日开盘买入（参考价 = 收盘价）",
+        "buy_stop": null,
+        "ref_price": 148.01,
+        "initial_stop": 135.14,
+        "target": null,
+        "exit_text": "止损 = 入场价 − 3×ATR；收盘 ≥ 20 日均线(中轨) → 次日开盘卖出；最多持有 15 个交易日",
+        "risk_per_share": 12.872,
+        "shares_per_10k": 15,
+        "rsi2": 15.4,
+        "fi2": -6191991.0,
+        "w_hist_up": false,
+        "screen1": false,
+        "screen2": false,
+        "sim_state": "long",
+        "sim_entry": 148.3699951171875,
+        "sim_entry_date": "2026-10-27",
+        "sim_stop": 135.27,
+        "bt_from": "2024-04-17",
+        "bt_trades": 4,
+        "bt_wins": 2,
+        "bt_win_rate": 0.5,
+        "bt_win_rate_lb": 0.15003570882017145,
+        "bt_avg_win": 0.056398015572545146,
+        "bt_avg_loss": -0.035551031211012385,
+        "bt_payoff": 1.5863960524181684,
+        "bt_expectancy": 0.01042349218076638,
+        "bt_profit_factor": 1.5863960524181684,
+        "bt_avg_days": 7.25,
+        "bt_exp_per_day": 0.0014377230594160525,
+        "rank": 3
+      }
+    ],
+    "status": {
+      "started_at": "2026-10-28T07:28:53+00:00",
+      "errors": [
+        "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
+        "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
+        "纳斯达克 100 名单全部来源失败，使用内置兜底名单",
+        "yfinance 缺 3 只，尝试 stooq 兜底"
+      ],
+      "missing": [
+        "EA",
+        "VYLR",
+        "WBD"
+      ],
+      "strategy": "bb_revert",
+      "mode": "daily",
+      "sp500_count": 503,
+      "ndx_wikipedia_bytes": 226064,
+      "ndx_wikipedia_tables": [
+        "11x2:0|1",
+        "2x3:Category|All-Time Hig|All-Time Hig",
+        "41x4:Year|Closing leve|Change in In|Change in In",
+        "31x3:Milestone (c|Date of Reco|Trading Days",
+        "3x3:Milestone (c|Date of Reco|Trading Days",
+        "1x2:vteList of N|vteList of N",
+        "4x3:vteNasdaq, I|vteNasdaq, I|vteNasdaq, I",
+        "34x2:vteStock mar|vteStock mar",
+        "2x2:0|1",
+        "4x2:0|1",
+        "5x2:0|1",
+        "5x2:0|1"
+      ],
+      "ndx_source": "fallback",
+      "ndx_count": 100,
+      "universe_size": 518,
+      "market_source": "SPY",
+      "priced": 515,
+      "as_of": "2026-10-27",
+      "elapsed_sec": 64.7
+    },
+    "system_stats": {
+      "trades": 3773,
+      "wins": 2447,
+      "win_rate": 0.6485555261065465,
+      "win_rate_lb": 0.6331774001508633,
+      "avg_win": 0.04515140809605295,
+      "avg_loss": -0.058781230934904886,
+      "payoff": 0.7681262773495542,
+      "expectancy": 0.00862485645145976,
+      "profit_factor": 1.4175000005085665,
+      "avg_days": 9.217068645640074,
+      "exp_per_day": 0.0009356137946395353,
+      "reasons": {
+        "cond": 2484,
+        "stop": 736,
+        "time": 553
+      },
+      "tickers_with_data": 513
+    }
+  },
+  "allocation": {
+    "target_amounts": {
+      "long_term": 6359.668,
+      "medium_term": 4088.358,
+      "short_term": 3634.096,
+      "cash": 4088.358
+    },
+    "actual_market_value": {
+      "long_term": 439.3200073,
+      "medium_term": 0,
+      "short_term": 0,
+      "cash": 17729.02
+    },
+    "planned_risk_limits_usd": {
+      "medium_trade": 90.8524,
+      "short_trade": 109.02288,
+      "active_total": 363.4096
+    },
+    "active_planned_stop_risk": 0,
+    "long_term_max_loss_capped_by_active_risk": false
+  },
+  "daily_actions": [
+    "Keep NVDA long-term holding; no short-term mechanical stop applied.",
+    "No new positions recommended today.",
+    "Do not renew expired TSM proposal automatically."
   ],
   "notes": [
-    "Queries are not simultaneous; account and per-position valuations may differ.",
-    "No orders were submitted or changed by the assistant.",
-    "PANW suggested pre-entry ATR: 18.654 as of 2026-10-19, project EWM method; not a confirmed adopted entry parameter.",
-    "Trade history covers a rolling 30-day window; not complete lifetime history.",
-    "Missing strategy or ATR values remain null; simulation positions are excluded."
+    "All values USD. BASE duplicates USD; do not add both.",
+    "Account stock market value 439.26 and per-position value 439.3200073 were queried asynchronously.",
+    "Account NAV exceeds account cash plus account stock value by 2.20; source did not explain residual; do not relabel as cash or profit.",
+    "NVDA last quote 219.72 at 08:13:17 UTC is outside regular session and is separate from position valuation 219.66000365.",
+    "TSM BUY 1 at 419.99 expired, filled zero. No TSM position or new trade found.",
+    "PANW sale reconfirmed via DAYS_7; already recorded; no duplicate trade added.",
+    "Annual performance series contains an unexplained 2026-07-29 discontinuity; annual return and full-history drawdown not validated.",
+    "Performance current point dated 2026-10-28 is partial-day; not a completed US regular-session return.",
+    "No orders submitted, modified or cancelled; no Git commit or push."
   ]
 }

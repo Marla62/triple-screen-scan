@@ -1,0 +1,222 @@
+{
+  "schema_version": 1,
+  "record_type": "real_brokerage_snapshot",
+  "observed_at_utc": "2026-10-27T02:48:37Z",
+  "report_date": "2026-10-27",
+  "source": "IBKR read-only query",
+  "account": {
+    "currency": "USD",
+    "net_liquidation": 18164.32,
+    "equity_with_loan_value": 18162.12,
+    "buying_power": 72076.8,
+    "gross_position_value": 433.1,
+    "total_cash_value": 17729.02,
+    "available_funds": 18019.2,
+    "initial_margin": 142.92,
+    "maintenance_margin": 129.93,
+    "excess_liquidity": 18032.19,
+    "dividends": 0,
+    "leverage": "0.02"
+  },
+  "balances": [
+    {
+      "currency": "BASE",
+      "cash_balance": 17729.0221,
+      "settled_cash": 17729.0221,
+      "net_liquidation_value": 18164.3221,
+      "stock_market_value": 433.1,
+      "unrealized_pnl": -39.85,
+      "realized_pnl": 44.5,
+      "exchange_rate": 1
+    },
+    {
+      "currency": "USD",
+      "cash_balance": 17729.0221,
+      "settled_cash": 17729.0221,
+      "net_liquidation_value": 18164.3221,
+      "stock_market_value": 433.1,
+      "unrealized_pnl": -39.85,
+      "realized_pnl": 44.5,
+      "exchange_rate": 1
+    }
+  ],
+  "positions": [
+    {
+      "contract_id": 4815747,
+      "contract_description": "NVDA",
+      "position": 2,
+      "market_price": 216.0399933,
+      "market_value": 432.0799866,
+      "currency": "USD",
+      "average_price": 236.47535,
+      "unrealized_pnl": -40.8707134,
+      "daily_pnl": 0.0799866,
+      "asset_class": "STK"
+    },
+    {
+      "contract_id": 110619459,
+      "contract_description": "PANW",
+      "position": 0,
+      "market_price": 391.5,
+      "market_value": 0,
+      "currency": "USD",
+      "average_price": 0,
+      "unrealized_pnl": 1.485e-05,
+      "daily_pnl": 0.18210855,
+      "asset_class": "STK"
+    }
+  ],
+  "orders": [
+    {
+      "order_id": 1364742554,
+      "order_status": "CANCELLED",
+      "order_type": "STOP",
+      "side": "SELL",
+      "total_shares_qty": "1",
+      "cum_shares_qty": "0",
+      "remaining_shares_qty": "0",
+      "primary_description": "Sell 1 PANW",
+      "secondary_description": "STP 289.83, GTC",
+      "order_time": "2026-10-27T02:39:10Z"
+    },
+    {
+      "order_id": 1537237905,
+      "order_status": "FILLED",
+      "order_type": "LIMIT",
+      "side": "SELL",
+      "limit_price": "391",
+      "total_shares_qty": "1",
+      "cum_shares_qty": "1",
+      "remaining_shares_qty": "0",
+      "primary_description": "Sold 1 PANW",
+      "secondary_description": "Limit 391.00, OVT",
+      "order_time": "2026-10-27T01:17:45Z"
+    }
+  ],
+  "performance": {
+    "cutoff": "2026-10-26",
+    "method": "TWR",
+    "daily_return": 0.00117249,
+    "month_return": -0.00715584,
+    "source_updated_at_raw": "2026-10-27 02:48:37"
+  },
+  "panw_exit_check": {
+    "date": "2026-10-26",
+    "close": 390.46,
+    "sma20": 384.16549999999995,
+    "triggered": true
+  },
+  "scanner": {
+    "source": "GitHub main direct fetch; no local fallback",
+    "commit": "a972ef8a94a8d492c07185bac431557604c70837",
+    "fetched_at": "2026-10-27T02:47:40.183113+00:00",
+    "as_of": "2026-10-26",
+    "generated_at": "2026-10-27T02:30:25+00:00",
+    "fresh": true,
+    "strategy": "bb_revert",
+    "market": {
+      "available": true,
+      "symbol": "SPY",
+      "date": "2026-10-26",
+      "close": 765.37,
+      "sma200": 727.39,
+      "above_sma": true
+    },
+    "candidates": [
+      {
+        "ticker": "TGT",
+        "name": "Target Corporation",
+        "sector": "Consumer Staples",
+        "index": "SPX",
+        "strategy": "bb_revert",
+        "as_of": "2026-10-26",
+        "close": 148.53,
+        "high": 153.84,
+        "atr14": 4.365,
+        "atr_pct": 2.94,
+        "candidate": true,
+        "status": "新信号",
+        "signal_date": "2026-10-26",
+        "entry_mode": "next_open",
+        "entry_text": "次日开盘买入（参考价 = 收盘价）",
+        "buy_stop": null,
+        "ref_price": 148.53,
+        "initial_stop": 135.43,
+        "target": null,
+        "exit_text": "止损 = 入场价 − 3×ATR；收盘 ≥ 20 日均线(中轨) → 次日开盘卖出；最多持有 15 个交易日",
+        "risk_per_share": 13.096,
+        "shares_per_10k": 15,
+        "rsi2": 17.3,
+        "fi2": -14716500.0,
+        "w_hist_up": false,
+        "screen1": false,
+        "screen2": false,
+        "sim_state": "pending_open",
+        "sim_entry": null,
+        "sim_entry_date": null,
+        "sim_stop": null,
+        "bt_from": "2024-04-17",
+        "bt_trades": 4,
+        "bt_wins": 2,
+        "bt_win_rate": 0.5,
+        "bt_win_rate_lb": 0.15003570882017145,
+        "bt_avg_win": 0.056398015572545146,
+        "bt_avg_loss": -0.035551031210992956,
+        "bt_payoff": 1.5863960524190355,
+        "bt_expectancy": 0.010423492180776095,
+        "bt_profit_factor": 1.5863960524190355,
+        "bt_avg_days": 7.25,
+        "bt_exp_per_day": 0.0014377230594173924,
+        "rank": 1
+      }
+    ],
+    "status": {
+      "started_at": "2026-10-27T02:29:12+00:00",
+      "errors": [
+        "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
+        "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
+        "纳斯达克 100 名单全部来源失败，使用内置兜底名单",
+        "yfinance 缺 3 只，尝试 stooq 兜底",
+        "1 只数据日期 ≠ 2026-10-26，已排除候选: HUBB"
+      ],
+      "missing": [
+        "EA",
+        "VYLR",
+        "WBD"
+      ],
+      "strategy": "bb_revert",
+      "mode": "daily",
+      "sp500_count": 503,
+      "ndx_wikipedia_bytes": 226063,
+      "ndx_wikipedia_tables": [
+        "11x2:0|1",
+        "2x3:Category|All-Time Hig|All-Time Hig",
+        "41x4:Year|Closing leve|Change in In|Change in In",
+        "31x3:Milestone (c|Date of Reco|Trading Days",
+        "3x3:Milestone (c|Date of Reco|Trading Days",
+        "1x2:vteList of N|vteList of N",
+        "4x3:vteNasdaq, I|vteNasdaq, I|vteNasdaq, I",
+        "34x2:vteStock mar|vteStock mar",
+        "2x2:0|1",
+        "4x2:0|1",
+        "5x2:0|1",
+        "5x2:0|1"
+      ],
+      "ndx_source": "fallback",
+      "ndx_count": 100,
+      "universe_size": 518,
+      "market_source": "SPY",
+      "priced": 515,
+      "as_of": "2026-10-26",
+      "elapsed_sec": 72.9
+    }
+  },
+  "notes": [
+    "Account and per-position queries are asynchronous; retain valuation differences.",
+    "NVDA quote timestamp unavailable.",
+    "No orders submitted, modified or cancelled by assistant.",
+    "PANW position zero; prior STOP order now CANCELLED, remaining zero.",
+    "TODAY trades returned empty inconsistently; DAYS_7 reconfirmed PANW sale. Preserve verified history.",
+    "Performance ends Oct 26; do not add Oct 27 realized trade again."
+  ]
+}

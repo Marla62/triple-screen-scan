@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "plans": [
+    {
+      "symbol": "PANW",
+      "entry_date": "2026-10-20",
+      "executed_at_utc": "2026-10-20T09:06:19Z",
+      "quantity": 1,
+      "execution_price": 345.79,
+      "average_cost_including_fees": 346.1435,
+      "currency": "USD",
+      "allocation": "short_term",
+      "strategy": "bb_revert",
+      "strategy_confirmed_on": "2026-10-26",
+      "confirmation_source": "用户本聊天明确：PANW 按短期布林回归策略管理",
+      "original_entry_reason": null,
+      "retrospective_strategy_explanation": "用户事后确认采用布林回归；技术逻辑为超卖后回归20日均线。原始信号与当时主观开仓理由未核实，不追认为已记录。",
+      "entry_atr_confirmed": false,
+      "prior_plan_atr_reference": {
+        "value": 18.654,
+        "period": 14,
+        "as_of": "2026-10-19",
+        "method": "TR.ewm(alpha=1/14, adjust=False)",
+        "source": "portfolio/latest.json notes and portfolio/reports/2026-10-23.md",
+        "status": "历史建议值，未确认是实际采用的入场参数"
+      },
+      "observed_stop_order": {
+        "side": "SELL",
+        "quantity": 1,
+        "type": "STOP",
+        "stop_price": 289.83,
+        "tif": "GTC",
+        "status": "CANCELLED",
+        "observed_on": "2026-10-27",
+        "outside_rth": null,
+        "trigger_method": null,
+        "reconciliation_needed": null,
+        "remaining_quantity": 0,
+        "status_time_utc": "2026-10-27T02:39:10Z"
+      },
+      "exit_plan_recommended_on": "2026-10-26",
+      "recommended_exit_plan": {
+        "stop_type": "fixed",
+        "stop_price": 289.83,
+        "stop_action": "保留现有保护单，不扩大止损，不引入2×ATR移动规则；没有执行改单",
+        "mean_reversion_exit": "常规交易收盘价 >= 当日SMA20，下一交易日常规开盘卖出全部剩余持仓；盘中越线不触发此条件",
+        "time_exit": {
+          "entry_day_count": 0,
+          "subsequent_sessions": 15,
+          "deadline_close_et": "2026-11-10",
+          "exit_open_et": "2026-11-11 09:30 America/New_York",
+          "exit_open_asia": "2026-11-11 22:30 Asia/Singapore"
+        },
+        "priority": "固定保护止损先触发则退出；否则均线或期限条件先到者退出，先核对成交和原卖单避免重复卖出"
+      },
+      "latest_completed_daily_check": {
+        "date": "2026-10-26",
+        "close": 390.46,
+        "sma20": 384.16549999999995,
+        "triggered": true
+      },
+      "earnings_date": null,
+      "orders_modified": false,
+      "history": [
+        {
+          "date": "2026-10-26",
+          "event": "用户确认短期bb_revert；保留入场ATR及原始理由未知；记录建议退出计划，无交易操作"
+        },
+        {
+          "date": "2026-10-27",
+          "event": "IBKR确认PANW隔夜卖出1股391美元，净收益44.498585；零持仓但旧止损卖单仍NEW，待核对撤销。无订单操作。"
+        },
+        {
+          "date": "2026-10-27",
+          "event": "本次IBKR确认PANW旧止损单CANCELLED、剩余0；遗留卖单风险解除。助手未操作订单。"
+        }
+      ],
+      "status": "closed",
+      "closed_at_utc": "2026-10-27T01:19:05Z",
+      "remaining_quantity": 0,
+      "exit_execution": {
+        "quantity": 1,
+        "price": 391.0,
+        "commission": 0.357915,
+        "realized_pnl": 44.498585,
+        "exchange": "OVERNIGHT",
+        "source": "IBKR verified 2026-10-27",
+        "deviation_from_plan": "Actual overnight exit before planned next regular open"
+      }
+    },
+    {
+      "symbol": "NVDA",
+      "entry_date": "2026-10-08",
+      "executed_at_utc": "2026-10-08T08:39:12Z",
+      "quantity": 2,
+      "execution_price": 236.3,
+      "average_cost_including_fees": 236.47535,
+      "currency": "USD",
+      "allocation": "long_term",
+      "strategy": "long_term_growth",
+      "strategy_confirmed_on": "2026-10-20",
+      "confirmation_source": "portfolio/latest.json: User confirmed 2026-10-20",
+      "original_entry_reason": null,
+      "retrospective_strategy_explanation": "已确认长期成长仓；原始个股投资论据、估值和失效条件未记录，不能编造。",
+      "entry_atr_confirmed": false,
+      "recommended_exit_plan": {
+        "review": "约每半年复核基本面、估值和长期逻辑；投资逻辑失效时复核减仓或退出，不自动套用短线ATR、SMA20或15日退出",
+        "time_exit": null
+      },
+      "history": [
+        {
+          "date": "2026-10-26",
+          "event": "从既有真实成交和已确认长期归属导入本地策略台账；原始开仓理由仍未知"
+        },
+        {
+          "date": "2026-10-28",
+          "event": "IBKR reconfirmed 2 shares. Original rationale remains unknown; strategy unchanged. Official next earnings call date 2026-11-17 recorded; precise release time not verified. No order action."
+        }
+      ],
+      "latest_review": {
+        "date": "2026-10-28",
+        "remaining_quantity": 2,
+        "strategy_changed": false,
+        "original_entry_reason_still_unknown": true,
+        "last_completed_session": "2026-10-27",
+        "held_sessions_including_entry": 14,
+        "held_sessions_entry_day_zero": 13,
+        "exit_trigger_status": "No mechanical price/time rule applies; original fundamental invalidation thresholds unknown. Continue thesis review.",
+        "working_orders": [],
+        "next_earnings_call_date": "2026-11-17",
+        "earnings_source": "https://investor.nvidia.com/files/content_files/TRANSCRIPT_-NVIDIA-Corp-NVDA-US-Q2-2027-Earnings-Call-26-August-2026-5_00-PM-ET.pdf",
+        "earnings_time_verified": false,
+        "recommendation": "Continue existing long-term position; no new addition today."
+      }
+    }
+  ],
+  "updated_on": "2026-10-28",
+  "record_scope": "策略计划与用户确认；实际成交以trades.jsonl为准；本文件不表示已提交订单",
+  "entry_proposals": [
+    {
+      "proposal_id": "2026-10-27-TSM-long-term-starter",
+      "proposed_on": "2026-10-27",
+      "status": "expired_unfilled",
+      "symbol": "TSM",
+      "allocation": "long_term",
+      "strategy": "long_term_growth",
+      "user_strategy_confirmation": false,
+      "reason": "TSMC Q3 2026 USD revenue +41.2% YoY, diluted EPS +68.7% in TWD, Q4 revenue guidance $52.3-54.3bn. Long-term leading-edge foundry thesis; semiconductor correlation with existing NVDA.",
+      "sources": [
+        "https://pr.tsmc.com/english/news/3346",
+        "https://investor.tsmc.com/english/quarterly-results/2026/q3"
+      ],
+      "signal_date": "2026-10-15",
+      "signal_type": "fundamental_research_not_scanner_signal",
+      "quote": {
+        "source": "IBKR",
+        "regular_close": 424.37,
+        "close_date": "2026-10-26",
+        "last": 421,
+        "last_at_utc": "2026-10-27T02:55:58Z",
+        "bid": 420.7,
+        "ask": 421.85
+      },
+      "entry": {
+        "quantity": 1,
+        "limit_price": 420,
+        "currency": "USD",
+        "regular_hours_only": true,
+        "valid_date": "2026-10-27",
+        "checks": "After regular session opens, check current quote and material news before deciding; no order submitted. Skip above $420, adverse new thesis-changing news, or account/holdings/order changes. No chasing or carrying stale proposal to following days."
+      },
+      "capital": 420,
+      "equity_weight_pct": 2.312225285614876,
+      "active_stop_risk": null,
+      "initial_atr": null,
+      "stop_price": null,
+      "risk": "No fixed ATR stop for long-term plan. Principal may fall substantially; maximum capital committed $420 plus fees. NVDA+TSM semiconductor exposure approximately 4.69% NAV; not industry diversification.",
+      "valuation": {
+        "method": "Q3 EPS annualized run-rate, not TTM or forecast",
+        "quarter_eps_per_adr": 4.6,
+        "annualized_eps": 18.4,
+        "pe_at_limit": 22.826086956521742,
+        "fair_value_established": false
+      },
+      "exit_or_review": "Review each quarterly release and approximately half-yearly (April 2027). Reassess if leading-edge demand/competitiveness or profitability materially deteriorates, guidance is materially cut, or geopolitical risk impairs the thesis. Do not mechanically apply short-term ATR or holding-day exits.",
+      "earnings": {
+        "last_release": "2026-10-15",
+        "next_release_date": null,
+        "plan": "Long-term starter may remain through next earnings only after thesis review; exact date not verified."
+      },
+      "unfilled_not_trade": true,
+      "broker_order_observation": {
+        "observed_on": "2026-10-28",
+        "source": "IBKR account orders",
+        "symbol": "TSM",
+        "side": "BUY",
+        "quantity": 1,
+        "limit_price": 419.99,
+        "tif": "DAY",
+        "status": "EXPIRED",
+        "filled_quantity": 0,
+        "remaining_quantity": 0,
+        "order_time_utc": "2026-10-27T03:14:12Z",
+        "proposal_limit_price": 420,
+        "assistant_submitted_order": false
+      },
+      "history": [
+        {
+          "date": "2026-10-28",
+          "event": "IBKR observed a 419.99 USD DAY buy order for 1 TSM, EXPIRED with zero fills; no TSM position. Prior proposal valid only 2026-10-27; not renewed."
+        }
+      ]
+    }
+  ]
+}

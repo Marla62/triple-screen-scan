@@ -5,7 +5,7 @@
 ================================================
 股票池：S&P 500 + 纳斯达克 100
 
-每日模式（python scan.py）：按 config.json 里选定的策略扫描候选、回测每只股票自身的胜率、按胜率排序，
+每日模式（python scan.py）：按 config.json 扫描候选、按当时可得的信号强度排序，单票胜率仅作诊断，
   输出 output/latest.json / latest.csv / latest.md / history/YYYY-MM-DD.json / status.json
 实验室模式（python scan.py --lab）：把所有策略在同一股票池、同一时间段、同样手续费下并排回测，
   输出 output/lab.json / lab.md
@@ -18,16 +18,17 @@
   bb_revert      布林带回归：收盘 > 200 日均线，收盘 < 下轨(20,2) 次日开盘买入；收盘回到中轨(20 日均线) 次日开盘卖出；3×ATR 保护止损；最多持 15 天
   *_rf           以上策略加“大盘过滤器”：只在 SPY 收盘 > 其 200 日均线时接受新信号（已持仓不受影响）
   mom_12_1       12-1 截面动量（月度）：每月最后一个交易日按“过去 12 个月收益（剔除最近 1 个月）”排名，
-                 取前 N 只且动量 > 0，次日开盘等权买入；掉出前 N 的次月初开盘卖出；SPY < 200 日均线时清仓持现金
+                 取前 N 只且动量 > 0，次日开盘买入新入选股；已有仓不重新等权；掉出前 N 的次月初开盘卖出；SPY < 200 日均线时月末清仓
   mom_12_1_nf    同上，但不带大盘过滤器
 
 成交假设：买入止损单在触发日按 max(触发价, 开盘价) 成交；“次日开盘”按开盘价成交；止损/止盈盘中触发，跳空按开盘价；
-  同日同时触及止损与止盈按止损计；收盘条件出场按次日开盘成交；每笔扣除 COST_RT（往返）成本。
+  同日同时触及止损与止盈按止损计；收盘条件出场按次日开盘成交；买卖各扣成交额 COST_RT/2。
 
 组合级评价（--lab）：除了单笔统计，每个策略还用同一套资金规则模拟一条账户资金曲线——
-  起始 START_EQUITY，信号类策略每笔按 2% 原则定仓（风险 = 2%×当前净值，仓位 = 风险 ÷ 每股风险），不用融资（现金不够就缩仓或跳过），
-  同时最多持 MAX_POSITIONS 只，同日信号过多按“信号强度”择优；动量策略等权持有前 N 只。
-  输出年化收益、最大回撤、Sharpe、Calmar、敞口、实际成交笔数，并与 SPY 买入持有对照。
+  起始 START_EQUITY，信号类策略每笔初始风险 0.5%、单票金额 10%、合计初始风险 2%，含费现金约束下整股定仓，不融资，
+  同时最多持 MAX_POSITIONS 只，同日信号过多按“信号强度”择优；动量策略只将现金等额分配给新入选股、向下取整。
+  输出年化收益、最大回撤、Sharpe、Calmar、敞口、模拟成交笔数，并与 SPY 买入持有对照。
+  仅供研究，尚无样本外验证；股票池仍存在幸存者偏差，不是实盘建议。
 """
 from __future__ import annotations
 
@@ -49,17 +50,18 @@ import pandas as pd
 # 配置
 # ----------------------------------------------------------------------------
 ATR_N = 14
+IMPLEMENTATION_VERSION = "2026-10-28-v1"
 TICK = 0.01
 LOOKBACK_YEARS = 4          # 下载年数（前 ~200 个交易日用于指标预热，不计入回测）
 WARMUP_WEEKS = 35
 MIN_TRADES = 8              # 少于此笔数的胜率视为“样本不足”
-RISK_PCT = 0.02
+RISK_PCT = 0.005
+ACTIVE_RISK_PCT = 0.02     # 持仓按初始计划风险占用；不因浮盈释放额度
 SIZE_BASIS = 10_000
-COST_RT = 0.0005            # 往返成本 0.05%（佣金 + 滑点的保守估计），所有策略一视同仁
+COST_RT = 0.0005            # 简化比例成本：买卖各 0.025%，不保证覆盖真实佣金与滑点
 START_EQUITY = 10_000       # 组合模拟起始资金
 MAX_POSITIONS = 10          # 组合模拟同时最多持仓数（信号类策略）
-MAX_POS_FRAC = 0.25         # 单只仓位不超过净值 25%（否则 2% 原则会把低波动票放到净值的 30~50%，永远只拿得住 2~3 只）
-MIN_NOTIONAL_FRAC = 0.05    # 现金不足以买到净值 5% 的仓位时跳过该信号
+MAX_POS_FRAC = 0.10         # 单只仓位金额不超过入场前净值 10%
 MARKET_SYMBOL = "SPY"       # 大盘过滤器 / 基准
 MARKET_SMA = 200
 MOM_LOOKBACK, MOM_SKIP, MOM_TOP_N = 252, 21, 10   # 12-1 动量：过去 252 日剔除最近 21 日；持有前 10 只
@@ -119,13 +121,13 @@ for _n in ("triple_screen", "rsi2", "bb_revert"):
 STRATEGIES["mom_12_1"] = dict(kind="momentum", label="12-1 动量（月度，前 10 只）+ 大盘过滤", entry="monthly", regime=True,
                               signal=None, stop_atr=None, trailing=False, target_atr=None, exit_cond=None, max_days=None, score=None,
                               desc=f"每月最后一个交易日按“过去 {MOM_LOOKBACK} 日收益（剔除最近 {MOM_SKIP} 日）”排名，取动量 > 0 的前 {MOM_TOP_N} 只，"
-                                   f"次日开盘等权买入；掉出前 {MOM_TOP_N} 的次月初开盘卖出；{MARKET_SYMBOL} 收盘 < {MARKET_SMA} 日均线时月末清仓持现金")
+                                   f"次日开盘整股买入新入选股（已有仓不重新等权）；掉出前 {MOM_TOP_N} 的次月初开盘卖出；{MARKET_SYMBOL} 收盘 < {MARKET_SMA} 日均线时月末清仓持现金")
 STRATEGIES["mom_12_1_nf"] = dict(STRATEGIES["mom_12_1"], label="12-1 动量（月度，前 10 只）不带过滤", regime=False,
                                  desc=STRATEGIES["mom_12_1"]["desc"].split("；" + MARKET_SYMBOL)[0] + "；不带大盘过滤器")
 DEFAULT_STRATEGY = "triple_screen"
 MARKET_OK: "pd.Series | None" = None     # 由 build_market() 填充：日期 → SPY 收盘是否在 200 日均线之上
 MARKET_CLOSE: "pd.Series | None" = None
-MARKET_LABEL = MARKET_SYMBOL             # 实际用的大盘序列名（拿不到 SPY 时是“等权代理指数”）
+MARKET_LABEL = MARKET_SYMBOL
 
 
 def load_config() -> dict:
@@ -443,29 +445,27 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
 # 大盘过滤器（SPY > 200 日均线）
 # ----------------------------------------------------------------------------
 def build_market(prices: dict[str, pd.DataFrame], status: dict) -> None:
-    """用 SPY 生成大盘状态；拿不到 SPY 时用股票池等权指数代替（按日收益率均值累积）。"""
+    """只用 SPY 生成大盘状态；缺失时关闭带过滤策略的新仓。"""
     global MARKET_OK, MARKET_CLOSE, MARKET_LABEL
     if MARKET_SYMBOL in prices:
         close = prices[MARKET_SYMBOL]["Close"].astype(float)
         status["market_source"] = MARKET_LABEL = MARKET_SYMBOL
     else:
-        rets = pd.concat({t: p["Close"].astype(float).pct_change() for t, p in prices.items()}, axis=1)
-        if rets.shape[1] == 0:
-            MARKET_OK = MARKET_CLOSE = None
-            return
-        close = (1 + rets.mean(axis=1).fillna(0)).cumprod() * 100
-        status["market_source"] = MARKET_LABEL = f"等权代理指数（{rets.shape[1]} 只）"
-        status["errors"].append(f"未取到 {MARKET_SYMBOL}，大盘过滤器改用股票池等权代理指数")
+        MARKET_OK = MARKET_CLOSE = None
+        MARKET_LABEL = MARKET_SYMBOL
+        status["market_source"] = None
+        status["errors"].append(f"未取到 {MARKET_SYMBOL}：带大盘过滤策略不接受新仓，基准不可用")
+        return
     sma = close.rolling(MARKET_SMA).mean()
     MARKET_CLOSE = close
-    MARKET_OK = (close > sma).where(sma.notna(), False).astype(bool)
+    MARKET_OK = (close > sma).astype("boolean").where(sma.notna() & close.notna())
 
 
 def market_flags(index: pd.DatetimeIndex) -> np.ndarray:
-    """把大盘状态对齐到某只股票的日期；某日缺大盘数据时沿用前一日。没有大盘数据时一律 True。"""
+    """严格按日期对齐；缺少当天大盘数据时不接受新信号。"""
     if MARKET_OK is None:
-        return np.ones(len(index), dtype=bool)
-    return MARKET_OK.reindex(index, method="ffill").fillna(False).values.astype(bool)
+        return np.zeros(len(index), dtype=bool)
+    return MARKET_OK.reindex(index, fill_value=False).fillna(False).values.astype(bool)
 
 
 # ----------------------------------------------------------------------------
@@ -481,7 +481,7 @@ class Trade:
     days: int
     reason: str
     ticker: str = ""
-    risk: float = float("nan")   # 初始止损距离 / 入场价（组合模拟按 2% 原则定仓用）
+    risk: float = float("nan")   # 初始止损距离 / 入场价（费用另计）
     score: float = 0.0           # 信号强度（同日信号过多时择优）
 
 
@@ -489,9 +489,9 @@ def run_strategy(d: pd.DataFrame, st: dict, ticker: str = "", eligible_from: "pd
     O, H, L, C = (d[k].values.astype(float) for k in ("Open", "High", "Low", "Close"))
     A = d["atr"].values.astype(float)
     S = d[st["signal"]].values.astype(bool)
-    if st.get("regime"):
-        S = S & market_flags(d.index)
-    if eligible_from is not None:            # 时点成分：加入指数之前不产生信号（避免幸存者偏差）
+    mk = market_flags(d.index) if st.get("regime") else np.ones(len(d), dtype=bool)
+    S = S & mk
+    if eligible_from is not None:            # 仅加入日期过滤，仍缺历史剔除及退市样本
         S = S & np.asarray(d.index >= eligible_from)
     SC = d[st["score"]].values.astype(float) if st.get("score") else np.zeros(len(d))
     W = d["screen1"].values.astype(bool)
@@ -513,7 +513,8 @@ def run_strategy(d: pd.DataFrame, st: dict, ticker: str = "", eligible_from: "pd
     sig_score = 0.0
 
     def rec(i: int, px: float, reason: str) -> None:
-        trades.append(Trade(str(idx[entry_i].date()), str(idx[i].date()), entry, px, px / entry - 1 - COST_RT,
+        trades.append(Trade(str(idx[entry_i].date()), str(idx[i].date()), entry, px,
+                            px * (1 - COST_RT / 2) / (entry * (1 + COST_RT / 2)) - 1,
                             i - entry_i, reason, ticker, k_stop * atr_e / entry, float(sig_score) if np.isfinite(sig_score) else 0.0))
 
     def open_position(i: int, px: float) -> bool:
@@ -539,6 +540,8 @@ def run_strategy(d: pd.DataFrame, st: dict, ticker: str = "", eligible_from: "pd
 
     for i in range(max(first, 1), n):
         o, h, l = O[i], H[i], L[i]
+        if state.startswith("pending") and not mk[i - 1]:
+            state = "flat"
         if state == "long":
             px, reason = None, None
             if exit_pending:
@@ -560,7 +563,7 @@ def run_strategy(d: pd.DataFrame, st: dict, ticker: str = "", eligible_from: "pd
                 elif max_days and days_held >= max_days:
                     exit_pending = "time"
         elif state == "pending_stop":
-            if h > trigger:
+            if h >= trigger:
                 open_position(i, o if o > trigger else trigger)
             elif W[i]:
                 trigger = min(trigger, h + TICK)
@@ -569,6 +572,8 @@ def run_strategy(d: pd.DataFrame, st: dict, ticker: str = "", eligible_from: "pd
         elif state == "pending_open":
             open_position(i, o)
 
+        if state.startswith("pending") and not mk[i]:
+            state = "flat"              # 当日收盘后撤销，不能据此回溯阻止当日成交
         if state == "flat" and S[i]:
             sig_score = SC[i]
             if st["entry"] == "buy_stop":
@@ -578,13 +583,15 @@ def run_strategy(d: pd.DataFrame, st: dict, ticker: str = "", eligible_from: "pd
 
     open_trade = None
     if state == "long":   # 数据末尾仍持有的仓位：按最后收盘价记一笔“未平仓”，供组合模拟按市值计入（不进胜率统计）
-        open_trade = Trade(str(idx[entry_i].date()), str(idx[n - 1].date()), entry, C[n - 1], C[n - 1] / entry - 1 - COST_RT,
+        open_trade = Trade(str(idx[entry_i].date()), str(idx[n - 1].date()), entry, C[n - 1],
+                           C[n - 1] / (entry * (1 + COST_RT / 2)) - 1,
                            n - 1 - entry_i, "open", ticker, k_stop * atr_e / entry, float(sig_score) if np.isfinite(sig_score) else 0.0)
     last = {
         "state": state,
         "open_trade": open_trade,
         "trigger": float(trigger) if state == "pending_stop" else None,
         "pending_since": str(idx[pending_since].date()) if state.startswith("pending") and pending_since >= 0 else None,
+        "pending_score": float(sig_score) if state.startswith("pending") and np.isfinite(sig_score) else 0.0,
         "sim_entry": float(entry) if state == "long" else None,
         "sim_entry_date": str(idx[entry_i].date()) if state == "long" else None,
         "sim_stop": float(stop) if state == "long" else None,
@@ -638,79 +645,118 @@ def price_matrix(ind: dict[str, pd.DataFrame], col: str) -> pd.DataFrame:
     return pd.concat({t: d[col].astype(float) for t, d in ind.items()}, axis=1).sort_index()
 
 
+def initial_risk_per_share(entry: float, risk: float) -> float:
+    """初始止损损失加预计买卖费用；不包含跳空超损。"""
+    return entry * (risk + COST_RT / 2 * (2 - risk))
+
+
+def whole_shares(entry: float, risk: float, equity: float, cash: float, risk_budget: float) -> int:
+    if entry <= 0 or not 0 < risk < 1 or risk_budget <= 0:
+        return 0
+    return max(0, math.floor(min(risk_budget / initial_risk_per_share(entry, risk),
+                                 MAX_POS_FRAC * equity / entry,
+                                 cash / (entry * (1 + COST_RT / 2)))))
+
+
 def simulate_portfolio(trades: list[Trade], closes: pd.DataFrame, start: pd.Timestamp,
                        start_equity: float = START_EQUITY, risk_pct: float = RISK_PCT,
                        max_pos: int = MAX_POSITIONS) -> dict:
     """信号类策略的组合模拟。
-    每笔：风险 = risk_pct × 当前净值，仓位金额 = 风险 ÷ (每股风险/入场价)，不融资（现金不足则缩到现金、太小则跳过）；
-    同时最多 max_pos 只；同日信号多于可开仓数时按 score 降序择优；出场按单笔回测的出场价（已含往返成本）。
+    整股按单笔风险、单票金额、合计初始风险和含费现金的最严约束定仓。
+    cond/time 是已知开盘退出；其他退出保守按盘中处理，资金、槽位和风险当日不复用。
+    买卖各按成交额收取 COST_RT/2；open 只是估值，不发生卖出费用。
     """
     cal = closes.index[closes.index >= start]
     by_entry: dict[pd.Timestamp, list[Trade]] = {}
     for tr in trades:
         e = pd.Timestamp(tr.entry_date)
-        if e >= start and np.isfinite(tr.risk) and tr.risk > 0:
+        if e >= start and np.isfinite(tr.risk) and 0 < tr.risk < 1:
             by_entry.setdefault(e, []).append(tr)
-    cash, positions = float(start_equity), {}          # ticker -> [shares, entry, Trade]
+    cash, positions = float(start_equity), {}          # ticker -> [shares, entry, Trade, initial risk]
     equity, invested, npos = [], [], []
-    taken = skipped_slots = skipped_cash = 0
+    taken = skipped_slots = skipped_cash = skipped_risk = 0
+    max_planned_risk = max_planned_risk_pct = 0.0
     cval = closes.ffill().values                       # 某票某日缺行情时用最近一次收盘估值
     col = {t: j for j, t in enumerate(closes.columns)}
     date_pos = {d: k for k, d in enumerate(closes.index)}
     prev_equity = float(start_equity)
     for day in cal:
         k = date_pos[day]
-        # 1) 出场（开盘或盘中，按单笔回测的成交价）
-        for t in [t for t, p in positions.items() if pd.Timestamp(p[2].exit_date) == day]:
-            sh, en, tr = positions.pop(t)
-            cash += sh * en * (1 + tr.ret)
-        # 2) 入场
-        for tr in sorted(by_entry.get(day, []), key=lambda x: -x.score):
+        entry_equity = prev_equity
+        # 1) 只有明确的开盘退出可以释放当日新仓资金。
+        for t in [t for t, p in positions.items()
+                  if pd.Timestamp(p[2].exit_date) == day and p[2].reason in ("cond", "time")]:
+            sh, en, tr, _ = positions.pop(t)
+            proceeds = sh * tr.exit * (1 - COST_RT / 2)
+            prior_price = cval[k - 1, col[t]] if k > 0 else en
+            entry_equity += proceeds - sh * (prior_price if np.isfinite(prior_price) else en)
+            cash += proceeds
+        # 2) 入场；同日进出也保留占用到所有入场处理完毕。
+        used_risk = sum(p[3] for p in positions.values())
+        for tr in sorted(by_entry.get(day, []), key=lambda x: (-x.score, x.ticker)):
             if tr.ticker in positions:
                 continue
             if len(positions) >= max_pos:
                 skipped_slots += 1
                 continue
-            notional = min(risk_pct * prev_equity / tr.risk, MAX_POS_FRAC * prev_equity, cash)
-            if notional < MIN_NOTIONAL_FRAC * prev_equity:
-                skipped_cash += 1
+            remaining_risk = max(0.0, ACTIVE_RISK_PCT * entry_equity - used_risk)
+            budget = min(risk_pct * entry_equity, remaining_risk)
+            shares = whole_shares(tr.entry, tr.risk, entry_equity, cash, budget)
+            if shares == 0:
+                if remaining_risk < initial_risk_per_share(tr.entry, tr.risk):
+                    skipped_risk += 1
+                else:
+                    skipped_cash += 1
                 continue
             taken += 1
-            if pd.Timestamp(tr.exit_date) == day:      # 入场当天就止损
-                cash += notional * tr.ret
-                continue
-            cash -= notional
-            positions[tr.ticker] = [notional / tr.entry, tr.entry, tr]
-        # 3) 收盘市值
+            planned_risk = shares * initial_risk_per_share(tr.entry, tr.risk)
+            cash -= shares * tr.entry * (1 + COST_RT / 2)
+            positions[tr.ticker] = [shares, tr.entry, tr, planned_risk]
+            used_risk += planned_risk
+            max_planned_risk = max(max_planned_risk, used_risk)
+            max_planned_risk_pct = max(max_planned_risk_pct, used_risk / entry_equity)
+        # 3) 盘中退出及同日止损的资金到下一交易日才能复用。
+        for t in [t for t, p in positions.items()
+                  if pd.Timestamp(p[2].exit_date) == day and p[2].reason != "open"]:
+            sh, _, tr, _ = positions.pop(t)
+            cash += sh * tr.exit * (1 - COST_RT / 2)
+        # 4) 收盘市值；数据末尾未平仓继续持有。
         inv = 0.0
-        for t, (sh, en, tr) in positions.items():
+        for t, (sh, en, tr, _) in positions.items():
             px = cval[k, col[t]]
             inv += sh * (px if np.isfinite(px) else en)
         prev_equity = cash + inv
+        held_risk = sum(p[3] for p in positions.values())
+        max_planned_risk = max(max_planned_risk, held_risk)
+        if prev_equity > 0:
+            max_planned_risk_pct = max(max_planned_risk_pct, held_risk / prev_equity)
         equity.append(prev_equity)
         invested.append(inv)
         npos.append(len(positions))
     eq = pd.Series(equity, index=cal)
-    m = curve_metrics(eq)
+    m = curve_metrics(eq, start_equity)
     m.update({"trades_taken": taken, "skipped_no_slot": skipped_slots, "skipped_no_cash": skipped_cash,
+              "skipped_risk_budget": skipped_risk, "max_planned_risk": max_planned_risk,
+              "max_planned_risk_pct": max_planned_risk_pct,
               "avg_positions": float(np.mean(npos)) if npos else 0.0,
               "exposure": float(np.mean(np.array(invested) / np.array(equity))) if equity else 0.0})
     return {"equity": eq, "metrics": m}
 
 
-def curve_metrics(eq: pd.Series) -> dict:
-    if len(eq) < 2:
+def curve_metrics(eq: pd.Series, start_equity: float = START_EQUITY) -> dict:
+    if len(eq) == 0:
         return {"cagr": None, "max_dd": None, "sharpe": None, "calmar": None, "final": None, "years": 0, "yearly": {}}
-    years = (eq.index[-1] - eq.index[0]).days / 365.25
-    total = eq.iloc[-1] / eq.iloc[0]
+    years = ((eq.index[-1] - eq.index[0]).days + 1) / 365.25
+    total = eq.iloc[-1] / start_equity
     cagr = total ** (1 / years) - 1 if years > 0 else None
-    dd = eq / eq.cummax() - 1
-    r = eq.pct_change().dropna()
+    dd = eq / eq.cummax().clip(lower=start_equity) - 1
+    r = eq.pct_change()
+    r.iloc[0] = eq.iloc[0] / start_equity - 1
     sharpe = float(r.mean() / r.std() * math.sqrt(252)) if len(r) > 1 and r.std() > 0 else None
     yearly = {}
     for y, g in eq.groupby(eq.index.year):
         prev = eq[eq.index < g.index[0]]
-        base = prev.iloc[-1] if len(prev) else g.iloc[0]
+        base = prev.iloc[-1] if len(prev) else start_equity
         yearly[str(y)] = float(g.iloc[-1] / base - 1)
     return {"cagr": float(cagr) if cagr is not None else None, "max_dd": float(dd.min()), "sharpe": sharpe,
             "calmar": float(cagr / abs(dd.min())) if cagr is not None and dd.min() < 0 else None,
@@ -719,7 +765,7 @@ def curve_metrics(eq: pd.Series) -> dict:
 
 
 def buy_and_hold(close: pd.Series, cal: pd.DatetimeIndex, start_equity: float = START_EQUITY) -> pd.Series:
-    c = close.reindex(cal, method="ffill").bfill()
+    c = close.reindex(cal)
     return start_equity * c / c.iloc[0]
 
 
@@ -750,41 +796,61 @@ def run_momentum(closes: pd.DataFrame, opens: pd.DataFrame, start: pd.Timestamp,
     """月末收盘排名，次日开盘调仓：卖出掉出前 N 的，用现金等分买入新进的；大盘过滤不通过时清仓。"""
     cal = closes.index
     mk = market_flags(cal) if st.get("regime") else np.ones(len(cal), dtype=bool)
+    market_known = (MARKET_OK.reindex(cal).notna().values if MARKET_OK is not None else np.zeros(len(cal), dtype=bool))
+    if not st.get("regime"):
+        market_known = np.ones(len(cal), dtype=bool)
     rebal = [i for i in month_ends(cal) if cal[i] >= start and i - MOM_LOOKBACK >= 0]
     empty = {"equity": pd.Series(dtype=float), "metrics": curve_metrics(pd.Series(dtype=float)), "trades": [], "holdings": {},
-             "targets": [], "market_ok_today": bool(mk[-1]) if len(cal) else False, "pending_target": None, "next_rebalance": None}
+             "targets": [], "market_ok_today": bool(mk[-1]) if len(cal) else False,
+             "market_known_today": bool(market_known[-1]) if len(cal) else False,
+             "pending_target": None, "next_rebalance": None}
     if not rebal:
         return empty
     sim_start = int(np.searchsorted(cal.values, np.datetime64(start)))   # 与其它策略同一起点，首个月末之前空仓持现金
     cash, positions, trades = float(start_equity), {}, []   # ticker -> [shares, entry_px, entry_i]
+    taken = 0
     equity, invested, npos = [], [], []
     pending_target: list[str] | None = None
+    pending_exits: set[str] = set()
     cv, ov = closes.ffill().values, opens.values
     col = {t: j for j, t in enumerate(closes.columns)}
     rebal_set = set(rebal)
     for k in range(sim_start, len(cal)):
-        # 1) 月初开盘执行上月末决定的调仓（某票当天没有开盘价时按最近收盘价成交）
+        # 1) 无有效开盘价的卖出保留待执行，不能以收盘价伪造成交或释放资金。
         if pending_target is not None:
-            for t in [t for t in positions if t not in pending_target]:
-                sh, en, ei = positions.pop(t)
-                px = ov[k, col[t]] if np.isfinite(ov[k, col[t]]) else cv[k, col[t]]
-                cash += sh * px * (1 - COST_RT / 2)
-                trades.append(Trade(str(cal[ei].date()), str(cal[k].date()), en, px, px / en - 1 - COST_RT, k - ei, "rebal", t))
+            pending_exits.difference_update(pending_target)
+            pending_exits.update(t for t in positions if t not in pending_target)
+        for t in sorted(pending_exits):
+            px = ov[k, col[t]]
+            if not np.isfinite(px) or px <= 0:
+                continue
+            sh, en, ei = positions.pop(t)
+            cash += sh * px * (1 - COST_RT / 2)
+            trades.append(Trade(str(cal[ei].date()), str(cal[k].date()), en, px,
+                                px * (1 - COST_RT / 2) / (en * (1 + COST_RT / 2)) - 1,
+                                k - ei, "rebal", t))
+            pending_exits.remove(t)
+        if pending_target is not None:
             new = [t for t in pending_target if t not in positions and np.isfinite(ov[k, col[t]]) and ov[k, col[t]] > 0]
             if new:
                 equity_now = cash + sum(sh * cv[k - 1, col[t]] for t, (sh, en, ei) in positions.items()) if k > 0 else cash
-                each = min(cash / len(new), equity_now / top_n)   # 新进的每只 ≤ 净值 / N，避免“三只掉出、一只新进”时把 30% 押在一只上
+                each = min(cash / len(new), MAX_POS_FRAC * equity_now * (1 + COST_RT / 2), equity_now / top_n)
                 for t in new:
                     px = ov[k, col[t]]
-                    positions[t] = [each * (1 - COST_RT / 2) / px, px, k]
-                    cash -= each
+                    shares = math.floor(each / (px * (1 + COST_RT / 2)))
+                    if shares:
+                        positions[t] = [shares, px, k]
+                        cash -= shares * px * (1 + COST_RT / 2)
+                        taken += 1
             pending_target = None
         # 2) 月末收盘决定下月目标
         if k in rebal_set:
-            if mk[k]:
+            if mk[k] or not market_known[k]:
                 sc = momentum_scores(closes, k, elig).dropna()
                 sc = sc[sc > 0].sort_values(ascending=False)
                 pending_target = list(sc.index[:top_n])
+                if not market_known[k]:
+                    pending_target = [t for t in pending_target if t in positions]
             else:
                 pending_target = []
         inv = 0.0
@@ -795,8 +861,8 @@ def run_momentum(closes: pd.DataFrame, opens: pd.DataFrame, start: pd.Timestamp,
         invested.append(inv)
         npos.append(len(positions))
     eq = pd.Series(equity, index=cal[sim_start:])
-    m = curve_metrics(eq)
-    m.update({"trades_taken": len(trades), "skipped_no_slot": 0, "skipped_no_cash": 0,
+    m = curve_metrics(eq, start_equity)
+    m.update({"trades_taken": taken, "skipped_no_slot": 0, "skipped_no_cash": 0,
               "avg_positions": float(np.mean(npos)) if npos else 0.0,
               "exposure": float(np.mean(np.array(invested) / np.array(equity))) if equity else 0.0})
     # 当前状态：持仓 + “若今天是月末”的目标名单 + 下一个调仓日
@@ -806,6 +872,7 @@ def run_momentum(closes: pd.DataFrame, opens: pd.DataFrame, start: pd.Timestamp,
     nxt = cal[-1] + pd.offsets.BMonthEnd(0)
     return {"equity": eq, "metrics": m, "trades": trades, "holdings": holdings,
             "targets": [(t, float(v)) for t, v in sc_now.items()], "market_ok_today": bool(mk[last]),
+            "market_known_today": bool(market_known[last]), "pending_exits": sorted(pending_exits),
             "pending_target": pending_target, "next_rebalance": str(nxt.date())}
 
 
@@ -825,21 +892,25 @@ def analyze(ticker: str, meta: dict, d: pd.DataFrame, strat_name: str) -> dict |
     is_pending = last["state"].startswith("pending")
     candidate = is_signal or is_pending
     if st["entry"] == "buy_stop":
-        ref = float(row["High"]) + TICK if candidate else None  # 买入止损价
+        ref = last["trigger"] if is_pending else (float(row["High"]) + TICK if candidate else None)
         entry_text = "买入止损单 @ 前一日高点 + 0.01"
     else:
         ref = float(row["Close"]) if candidate else None        # 次日开盘买入，参考价 = 收盘
         entry_text = "次日开盘买入（参考价 = 收盘价）"
     risk_ps = st["stop_atr"] * a
-    shares = int(math.floor(RISK_PCT * SIZE_BASIS / risk_ps)) if risk_ps > 0 else None
+    shares = whole_shares(ref, risk_ps / ref, SIZE_BASIS, SIZE_BASIS,
+                          min(RISK_PCT, ACTIVE_RISK_PCT) * SIZE_BASIS) if ref else None
+    signal_score = last["pending_score"] if is_pending else float(row[st["score"]])
+    signal_score = signal_score if np.isfinite(signal_score) else 0.0
     return {
         "ticker": ticker, "name": meta.get("name", ticker), "sector": meta.get("sector", ""), "index": meta.get("index", ""),
         "strategy": strat_name, "as_of": as_of,
         "close": round(float(row["Close"]), 2), "high": round(float(row["High"]), 2),
         "atr14": round(a, 3), "atr_pct": round(a / float(row["Close"]) * 100, 2),
         "candidate": candidate,
-        "status": "新信号" if is_signal else ("挂单延续" if is_pending else ""),
-        "signal_date": as_of if is_signal else last.get("pending_since"),
+        "status": "挂单延续" if is_pending and last["pending_since"] != as_of else ("新信号" if is_signal else ""),
+        "signal_date": last["pending_since"] if is_pending else as_of,
+        "signal_score": signal_score,
         "entry_mode": st["entry"], "entry_text": entry_text,
         "buy_stop": round(ref, 2) if (ref and st["entry"] == "buy_stop") else None,
         "ref_price": round(ref, 2) if ref else None,
@@ -900,7 +971,8 @@ def analyze_momentum(uni: pd.DataFrame, ind: dict[str, pd.DataFrame], strat_name
         close = float(row["Close"])
         in_top = rank <= MOM_TOP_N and np.isfinite(mom) and mom > 0 and res["market_ok_today"]
         if t in held:
-            status_txt = "持有中" + ("" if in_top else "（月末将卖出）")
+            status_txt = "持有中" + ("（大盘未知，月末仅按排名管理旧仓）" if not res["market_known_today"]
+                                    else ("" if in_top else "（月末将卖出）"))
         else:
             status_txt = "月末买入候选" if in_top else "观察"
         rows.append({
@@ -908,10 +980,11 @@ def analyze_momentum(uni: pd.DataFrame, ind: dict[str, pd.DataFrame], strat_name
             "index": meta.get(t, {}).get("index", ""), "strategy": strat_name, "as_of": str(d.index[-1].date()),
             "close": round(close, 2), "high": round(float(row["High"]), 2), "atr14": round(a, 3), "atr_pct": round(a / close * 100, 2),
             "candidate": in_top or t in held, "status": status_txt, "signal_date": res["next_rebalance"],
-            "entry_mode": "monthly", "entry_text": f"月末（{res['next_rebalance']}）收盘后确认排名，次日开盘等权买入",
+            "entry_mode": "monthly", "entry_text": f"月末（{res['next_rebalance']}）收盘后确认排名，次日开盘按现金及单票上限整股买入新入选股",
             "buy_stop": None, "ref_price": round(close, 2), "initial_stop": None, "target": None,
             "exit_text": exit_text(st), "risk_per_share": None,
-            "shares_per_10k": int(math.floor(SIZE_BASIS / MOM_TOP_N / close)),
+            "shares_per_10k": math.floor(min(SIZE_BASIS / MOM_TOP_N, MAX_POS_FRAC * SIZE_BASIS)
+                                         / (close * (1 + COST_RT / 2))),
             "momentum_12_1": round(float(mom), 4) if np.isfinite(mom) else None, "mom_rank": rank if np.isfinite(mom) else None,
             "rsi2": round(float(row["rsi2"]), 1), "fi2": round(float(row["fi2"]), 0),
             "w_hist_up": bool(row["w_hist_up"]), "screen1": bool(row["screen1"]), "screen2": bool(row["screen2"]),
@@ -922,13 +995,14 @@ def analyze_momentum(uni: pd.DataFrame, ind: dict[str, pd.DataFrame], strat_name
                                           "profit_factor", "avg_days", "exp_per_day")},
             "bt_win_rate_lb": 0.0, "_trades": [],
         })
-    extra = {"market_ok": res["market_ok_today"], "next_rebalance": res["next_rebalance"],
+    extra = {"market_ok": res["market_ok_today"], "market_known": res["market_known_today"],
+             "pending_exits": res.get("pending_exits", []), "next_rebalance": res["next_rebalance"],
              "sim_holdings": held, "portfolio": res["metrics"], "_trades": res["trades"]}
     return rows, extra
 
 
 def eligibility(uni: pd.DataFrame, closes: pd.DataFrame) -> tuple[dict, "pd.DataFrame | None"]:
-    """时点成分（point-in-time）：S&P 500 名单里的“Date added”之前，该股不参与信号/排名。
+    """仅过滤当前名单中股票的加入日期；仍缺历史剔除、退市样本，不能消除幸存者偏差。
     返回 (ticker → 加入日期 或 None, 日期×股票 的布尔表 或 None)。没有任何日期信息（--sample）时不做限制。"""
     if "date_added" not in uni.columns or uni["date_added"].notna().sum() == 0:
         return {}, None
@@ -950,14 +1024,14 @@ def common_start(ind: dict[str, pd.DataFrame], closes: pd.DataFrame) -> pd.Times
 
 
 def rank_key(r: dict):
-    """按样本修正后的胜率（Wilson 95% 下界）降序；并列看盈亏比、笔数。"""
-    return (-(r["bt_win_rate_lb"] or 0), -(r["bt_payoff"] or 0), -(r["bt_trades"] or 0))
+    """按当时可得的信号强度排序，代码稳定打破并列；历史胜率仅作诊断。"""
+    return (-r["signal_score"], r["ticker"])
 
 
 # ----------------------------------------------------------------------------
 # 输出（每日模式）
 # ----------------------------------------------------------------------------
-CSV_COLS = ["rank", "ticker", "name", "sector", "index", "strategy", "status", "signal_date", "close", "high", "atr14", "atr_pct",
+CSV_COLS = ["rank", "ticker", "name", "sector", "index", "strategy", "status", "signal_date", "signal_score", "close", "high", "atr14", "atr_pct",
             "entry_mode", "buy_stop", "ref_price", "initial_stop", "target", "risk_per_share", "shares_per_10k",
             "bt_win_rate_lb", "bt_win_rate", "bt_trades", "bt_wins", "bt_payoff", "bt_expectancy", "bt_profit_factor", "bt_avg_days",
             "rsi2", "w_hist_up", "fi2", "momentum_12_1", "mom_rank"]
@@ -978,8 +1052,10 @@ def market_info(as_of: str) -> dict:
     if len(c) == 0:
         return {"available": False}
     sma = float(c.rolling(MARKET_SMA).mean().iloc[-1]) if len(c) >= MARKET_SMA else None
-    return {"available": True, "symbol": MARKET_LABEL, "date": str(c.index[-1].date()), "close": round(float(c.iloc[-1]), 2),
-            f"sma{MARKET_SMA}": round(sma, 2) if sma else None, "above_sma": bool(c.iloc[-1] > sma) if sma else None}
+    current = c.index[-1] == pd.Timestamp(as_of) and sma is not None
+    return {"available": current, "symbol": MARKET_LABEL, "date": str(c.index[-1].date()), "close": round(float(c.iloc[-1]), 2),
+            f"sma{MARKET_SMA}": round(sma, 2) if sma else None,
+            "above_sma": bool(c.iloc[-1] > sma) if current else None}
 
 
 def write_outputs(cands: list[dict], all_rows: list[dict], status: dict, as_of: str, strat_name: str,
@@ -997,18 +1073,22 @@ def write_outputs(cands: list[dict], all_rows: list[dict], status: dict, as_of: 
     slim = [{k: v for k, v in r.items() if not k.startswith("_")} for r in cands]
     is_mom = st.get("kind") == "momentum"
     payload = {
+        "implementation_version": IMPLEMENTATION_VERSION,
         "as_of": as_of,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "strategy": strat_name, "strategy_label": st["label"], "strategy_desc": st["desc"],
         "entry_mode": st["entry"], "exit_rule": exit_text(st),
         "regime_filter": bool(st.get("regime")),
+        "research_only": True, "out_of_sample_validated": False,
         "market": market_info(as_of),
         "rules": {
             "ranking": (f"按 12-1 动量降序；前 {MOM_TOP_N} 名为月末买入候选" if is_mom else
-                        f"按样本修正后的胜率（Wilson 95% 置信下界）降序，小样本自动向下修正；笔数 < {MIN_TRADES} 仍标注样本不足"),
-            "sizing": (f"等权：每只 = 资金 ÷ {MOM_TOP_N}，报告按每 ${SIZE_BASIS:,} 资金给出" if is_mom else
-                       f"2% 原则：股数 = 2%×资金 ÷ ({st['stop_atr']:g}×ATR)，报告按每 ${SIZE_BASIS:,} 资金给出"),
-            "cost": f"回测每笔扣往返成本 {COST_RT * 100:.2f}%",
+                        "按信号强度降序、代码升序；延续挂单保留原信号强度；历史胜率仅作诊断"),
+            "sizing": (f"新股整股买入，每只不超过资金/{MOM_TOP_N}及净值{MAX_POS_FRAC:.0%}，现金含买入费；保留仓不重新等权，无ATR止损" if is_mom else
+                       f"单笔初始风险{RISK_PCT:.1%}、单票金额{MAX_POS_FRAC:.0%}、合计初始风险{ACTIVE_RISK_PCT:.0%}；风险含预计买卖费用，现金含买入费，按最严约束取整股；持仓不因浮盈释放原始风险"),
+            "example": f"每 ${SIZE_BASIS:,} 全现金无其他持仓账户的研究示例，非实盘建议；实际须扣除已有仓位及挂单占用",
+            "cost": f"每端按实际成交额扣{COST_RT / 2:.3%}的简化成本；未平仓仅扣买入端，不能保证覆盖真实IBKR费用、滑点或跳空",
+            "validation": "未作样本外验证；当前成分股名单缺历史剔除及退市股票，仍有幸存者偏差",
         },
         "system_stats": sys_st,
         "candidate_count": len(slim),
@@ -1027,16 +1107,19 @@ def write_outputs(cands: list[dict], all_rows: list[dict], status: dict, as_of: 
                f"{'在均线之上 ✅' if mk.get('above_sma') else '在均线之下 ⛔'}" + ("（本策略带大盘过滤）" if st.get("regime") else "（本策略不带过滤，仅供参考）")
                if mk.get("available") else "大盘：无数据")
     lines = [f"# 候选清单 — {st['label']} — 数据截至 {as_of}（美东收盘）", "",
+             "**仅供研究，尚无样本外验证，不是实盘买入建议；当前股票池仍有幸存者偏差。**", "",
              f"生成时间（UTC）：{payload['generated_at']}  ",
              f"股票池：{status.get('universe_size', '?')} 只，有数据 {len(all_rows)} 只，候选 {len(slim)} 只  ",
              mk_line + "  ",
              f"全池回测（同一规则）：{sys_st['trades']} 笔，胜率 {fmt_pct(sys_st['win_rate'])}，盈亏比 {fmt(sys_st['payoff'])}，"
              f"单笔期望 {fmt_pct(sys_st['expectancy'], 2)}，平均持有 {fmt(sys_st['avg_days'], 1)} 天", "",
-             f"入场：{st['desc']}  ", f"出场：{exit_text(st)}  "]
+             f"入场：{st['desc']}  ", f"出场：{exit_text(st)}  ",
+             f"仓位：{payload['rules']['sizing']}。{payload['rules']['example']}。  ",
+             f"成本：{payload['rules']['cost']}。  "]
     if is_mom:
         pf = extra.get("portfolio", {})
         lines += [f"下一个调仓日：{extra.get('next_rebalance')}（月末收盘后按当天排名执行，本表是“若今天是月末”的排名预览）  ",
-                  f"组合模拟（起始 ${START_EQUITY:,}，等权前 {MOM_TOP_N} 只）：年化 {fmt_pct(pf.get('cagr'))}，最大回撤 {fmt_pct(pf.get('max_dd'))}，"
+                  f"组合模拟（起始 ${START_EQUITY:,}，前 {MOM_TOP_N} 只，已有仓不重新等权）：年化 {fmt_pct(pf.get('cagr'))}，最大回撤 {fmt_pct(pf.get('max_dd'))}，"
                   f"Sharpe {fmt(pf.get('sharpe'))}，{pf.get('start')} 起", "",
                   "| # | 代码 | 名称 | 状态 | 收盘 | 12-1 动量 | ATR14 | 每$1万可买 | 模拟持仓 |", "|--:|---|---|---|--:|--:|--:|--:|---|"]
         for r in slim:
@@ -1044,14 +1127,14 @@ def write_outputs(cands: list[dict], all_rows: list[dict], status: dict, as_of: 
             lines.append(f"| {r['rank']} | **{r['ticker']}** | {r['name'][:22]} | {r['status']} | {r['close']:.2f} | {fmt_pct(r['momentum_12_1'])} | "
                          f"{r['atr14']:.2f} | {r['shares_per_10k']} | {sim} |")
     else:
-        lines += [f"胜率来自每只股票自身约 {LOOKBACK_YEARS - 1} 年的回测（含 {COST_RT * 100:.2f}% 往返成本）。排序用“修正胜率”= Wilson 95% 置信下界，"
-                  f"样本越少向下修正越多（10 笔 10 胜 ≈ 72%）；笔数 < {MIN_TRADES} 另标注样本不足。", "",
-                  f"| # | 代码 | 名称 | 状态 | 收盘 | ATR14 | {price_hdr} | 初始止损 | 止盈 | 每股风险 | 每$1万可买 | 修正胜率 | 原始胜率 | 笔数 | 盈亏比 | 单笔期望 | 平均持有天 | 模拟持仓 |",
-                  "|--:|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|"]
+        lines += [f"排序按当时可得的信号强度、代码；与组合模拟一致。单票胜率来自约 {LOOKBACK_YEARS - 1} 年历史，"
+                  f"Wilson 下界只作诊断，笔数 < {MIN_TRADES} 标注样本不足；不能据此证明未来胜率。", "",
+                  f"| # | 代码 | 名称 | 状态 | 信号强度 | 收盘 | ATR14 | {price_hdr} | 初始止损 | 止盈 | 每股止损距离 | 每$1万示例股数 | 修正胜率 | 原始胜率 | 笔数 | 盈亏比 | 单笔期望 | 平均持有天 | 模拟持仓 |",
+                  "|--:|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|"]
         for r in slim:
             low = "⚠️样本不足 " if (r["bt_trades"] or 0) < MIN_TRADES else ""
             sim = (f"持有中 {r['sim_entry_date']} 入场 {r['sim_entry']:.2f}，止损 {r['sim_stop']:.2f}" if r["sim_state"] == "long" else "")
-            lines.append(f"| {r['rank']} | **{r['ticker']}** | {r['name'][:22]} | {r['status']} | {r['close']:.2f} | {r['atr14']:.2f} | "
+            lines.append(f"| {r['rank']} | **{r['ticker']}** | {r['name'][:22]} | {r['status']} | {fmt(r['signal_score'], 3)} | {r['close']:.2f} | {r['atr14']:.2f} | "
                          f"{fmt(r['ref_price'])} | {fmt(r['initial_stop'])} | {fmt(r['target'])} | {fmt(r['risk_per_share'])} | {r['shares_per_10k']} | "
                          f"**{fmt_pct(r['bt_win_rate_lb'])}** | {low}{fmt_pct(r['bt_win_rate'])} | {r['bt_trades']} | {fmt(r['bt_payoff'])} | {fmt_pct(r['bt_expectancy'], 2)} | "
                          f"{fmt(r['bt_avg_days'], 1)} | {sim} |")
@@ -1075,7 +1158,7 @@ def run_lab(uni: pd.DataFrame, prices: dict[str, pd.DataFrame], status: dict) ->
             except Exception as e:  # noqa
                 status["errors"].append(f"{t} 指标计算失败: {e!r}")
     as_of = pd.Series([str(d.index[-1].date()) for d in ind.values()]).mode().iloc[0]
-    # 时点成分：有“加入日期”的（S&P 500）按日期生效；纳斯达克 100 独有、无日期的名单不进实验室（无法判断回测期内是否已是成分股）
+    # 仅加入日期过滤；纳斯达克 100 独有、无日期的名单不进实验室，仍缺历史剔除及退市股票。
     if "date_added" in uni.columns and uni["date_added"].notna().any():
         dated = set(uni.loc[uni["date_added"].notna(), "ticker"])
         dropped = [t for t in ind if t not in dated]
@@ -1087,8 +1170,11 @@ def run_lab(uni: pd.DataFrame, prices: dict[str, pd.DataFrame], status: dict) ->
     cal = closes.index[closes.index >= start]
     late = sorted([(t, dt) for t, dt in added.items() if t in ind and dt is not None and dt > start], key=lambda x: x[1])
     status["added_after_start"] = [f"{t} {dt.date()}" for t, dt in late]
-    # 基准：SPY 买入持有（拿不到 SPY 时用等权代理指数）
-    bench = buy_and_hold(MARKET_CLOSE, cal) if MARKET_CLOSE is not None else None
+    # 基准只用 SPY；没有足够的当期数据时不报告替代基准。
+    bench = (buy_and_hold(MARKET_CLOSE, cal)
+             if MARKET_CLOSE is not None and MARKET_CLOSE.reindex(cal).notna().all() else None)
+    if bench is None:
+        status["errors"].append("SPY 基准缺少回测区间的完整日期，未生成替代基准")
     bench_m = curve_metrics(bench) if bench is not None else None
     results, curves = {}, {}
     for name, st in STRATEGIES.items():
@@ -1139,11 +1225,18 @@ def run_lab(uni: pd.DataFrame, prices: dict[str, pd.DataFrame], status: dict) ->
             "top_tickers": top,
         }
     payload = {"as_of": as_of, "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+               "implementation_version": IMPLEMENTATION_VERSION,
+               "research_only": True, "out_of_sample_validated": False,
                "tickers": len(ind), "cost_rt": COST_RT, "min_trades": MIN_TRADES,
                "portfolio_rules": {"start_equity": START_EQUITY, "risk_pct": RISK_PCT, "max_positions": MAX_POSITIONS,
+                                   "active_risk_pct": ACTIVE_RISK_PCT, "max_position_fraction": MAX_POS_FRAC,
+                                   "whole_shares": True, "risk_basis": "original_stop_loss_including_estimated_fees",
+                                   "risk_valuation": "previous_close_equity adjusted for known opening exit proceeds; original dollar risk retained while held",
+                                   "cost_per_side": COST_RT / 2, "cost_is_simplified": True,
                                    "start": str(start.date()), "end": str(cal[-1].date()) if len(cal) else None,
                                    "market_source": status.get("market_source"),
-                                   "point_in_time": elig is not None, "added_after_start": len(late)},
+                                   "point_in_time": False, "added_date_filter": elig is not None,
+                                   "survivorship_bias_remaining": True, "added_after_start": len(late)},
                "benchmark": bench_m, "strategies": results, "status": status}
     (OUT_DIR / "lab.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
     # 资金曲线（月末采样）供画图
@@ -1162,17 +1255,20 @@ def run_lab(uni: pd.DataFrame, prices: dict[str, pd.DataFrame], status: dict) ->
                 f"${m['final']:,.0f} | {m.get('trades_taken', '')} | {fmt(m.get('avg_positions'), 1)} | {fmt_pct(m.get('exposure'), 0)} | {extra} |")
 
     lines = [f"# 策略实验室 — 数据截至 {as_of}", "",
+             "**仅供研究，尚无样本外验证，不是实盘建议；修改后的历史表现也不能证明未来有效。**", "",
              f"股票池 {len(ind)} 只，回测窗口 {payload['portfolio_rules']['start']} → {payload['portfolio_rules']['end']}（所有策略同一起点），"
-             f"每笔扣往返成本 {COST_RT * 100:.2f}%。", "",
-             (f"**时点成分**：按 S&P 500 的“加入日期”生效，回测期内后加入的 {len(late)} 只在加入前不参与信号和排名"
-              f"（{', '.join(t for t, _ in late[:12])}{'…' if len(late) > 12 else ''}），避免用今天的名单回看历史的幸存者偏差。"
+             f"买卖各扣成交额 {COST_RT / 2:.3%}；未平仓只扣买入费。这是简化比例成本，不能保证覆盖真实IBKR费用和滑点。", "",
+             (f"**仅加入日期过滤**：当前 S&P 500 名单中回测期内后加入的 {len(late)} 只，在加入前不参与信号和排名"
+              f"（{', '.join(t for t, _ in late[:12])}{'…' if len(late) > 12 else ''}）；仍缺历史剔除及退市样本，有幸存者偏差，不是真正时点成分股回测。"
               + (f" {status['lab_universe_note']}" if status.get("lab_universe_note") else "")) if elig is not None else
              "**注意**：本次没有成分股加入日期信息，回测用的是今天的名单（有幸存者偏差，动量类结果偏乐观）。", "",
              "## 组合级资金曲线（这张表才是该看的）", "",
-             f"同一套资金规则：起始 ${START_EQUITY:,}；信号类策略每笔风险 = {RISK_PCT:.0%} × 当前净值，仓位 = 风险 ÷ 每股风险，"
-             f"单只不超过净值 {MAX_POS_FRAC:.0%}，不用融资，同时最多 {MAX_POSITIONS} 只，同日信号过多按信号强度择优；"
-             f"数据末尾未平仓的按末日收盘计入市值。动量策略等权持有前 {MOM_TOP_N} 只（新进的每只 ≤ 净值/{MOM_TOP_N}）。"
-             f"基准 = {status.get('market_source', MARKET_SYMBOL)} 买入持有。", "",
+             f"资金规则：起始 ${START_EQUITY:,}；信号类策略单笔初始风险 {RISK_PCT:.1%}、合计初始风险 {ACTIVE_RISK_PCT:.0%}（含预计双边费用，持仓不因浮盈释放原始风险），"
+             f"单只金额不超过净值 {MAX_POS_FRAC:.0%}；定仓基数为前收净值，已知开盘退出按净所得更新，剩余持仓仍以前收估值；含费现金约束下向下取整，不融资，最多 {MAX_POSITIONS} 只。"
+             "同日信号按当时可得强度、代码排序；只有明确开盘退出可释放当日资金，盘中退出与同日止损的资金、槽位及风险次日才复用。"
+             f"未平仓只按收盘标值。动量前 {MOM_TOP_N} 只仅对新入选股等额分配现金取整，已有仓不重新等权；没有止损，其风险不受上述2%计划止损预算限制。"
+             "月末大盘未知仅禁止新增，旧仓仍按可确认排名管理；明确趋势失败才按规则清仓。卖单缺有效开盘价则保留至有报价时执行，不以收盘价替代，不自动追买错过的新仓。"
+             f"基准为 SPY 买入持有，缺完整数据时不生成替代基准。", "",
              "| 策略 | 年化 | 最大回撤 | Sharpe | Calmar | 终值 | 成交笔数 | 平均持仓数 | 平均敞口 | 备注 |",
              "|---|--:|--:|--:|--:|--:|--:|--:|--:|---|"]
     if bench_m:
@@ -1183,7 +1279,9 @@ def run_lab(uni: pd.DataFrame, prices: dict[str, pd.DataFrame], status: dict) ->
         if m.get("skipped_no_slot"):
             note.append(f"因持仓已满跳过 {m['skipped_no_slot']} 笔")
         if m.get("skipped_no_cash"):
-            note.append(f"因现金不足跳过 {m['skipped_no_cash']} 笔")
+            note.append(f"因现金/单笔/单票额度不足一股跳过 {m['skipped_no_cash']} 笔")
+        if m.get("skipped_risk_budget"):
+            note.append(f"因合计风险额度不足一股跳过 {m['skipped_risk_budget']} 笔")
         lines.append(pf_row(r["label"], m, "；".join(note)))
     years_all = sorted({y for r in results.values() for y in r["portfolio"].get("yearly", {})} |
                        (set(bench_m["yearly"]) if bench_m else set()))
@@ -1279,7 +1377,7 @@ def main() -> int:
                 status["errors"].append(f"yfinance 缺 {len(missing)} 只，尝试 stooq 兜底")
                 prices.update(fetch_stooq(missing, status))
             status["missing"] = [t for t in tickers if t not in prices]
-        build_market(prices, status)          # SPY（或代理指数）→ 大盘过滤器 / 基准
+        build_market(prices, status)          # 只用 SPY；缺失则关闭过滤策略新仓
         prices.pop(MARKET_SYMBOL, None)       # SPY 只做大盘，不进股票池
         status["priced"] = len(prices)
 

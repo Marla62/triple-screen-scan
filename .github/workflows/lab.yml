@@ -26,6 +26,9 @@ jobs:
       - name: 安装依赖
         run: pip install -r requirements.txt
 
+      - name: 验证策略实现
+        run: python -m unittest discover -s tests -v
+
       - name: 运行策略实验室
         run: python scan.py --lab
 

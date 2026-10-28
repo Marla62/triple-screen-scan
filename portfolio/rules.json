@@ -1,14 +1,14 @@
 {
-  "confirmed_on": "2026-10-20",
+  "confirmed_on": "2026-10-26",
   "target_allocation": {
-    "long_term": 0.4,
+    "long_term": 0.35,
     "medium_term": 0.225,
-    "short_term": 0.15,
+    "short_term": 0.2,
     "cash": 0.225
   },
   "planned_risk_limits": {
     "medium_trade": 0.005,
-    "short_trade": 0.006,
+    "short_trade": 0.005,
     "active_total": 0.02
   },
   "single_symbol_cap": 0.1,
@@ -31,5 +31,39 @@
     "bb_revert": "Fixed 3 x entry ATR; close >= current SMA20 exits next regular open; entry day count 0, 15 subsequent sessions then next-open exit.",
     "mom_12_1": "Month-end ranking, next-open rebalance; SPY/SMA200 filter; no ATR stop."
   },
-  "atr_method": "Project TR.ewm(alpha=1/14, adjust=False); differs from strict Wilder initialization."
+  "atr_method": "Project TR.ewm(alpha=1/14, adjust=False); differs from strict Wilder initialization.",
+  "updated_on": "2026-10-28",
+  "strategy_development": {
+    "version": "2026-10-28-v1",
+    "authorization": "用户要求按本聊天建议优化策略；执行参数由助手选定，尚未证明提高收益。",
+    "active_entry_stage": "research_only",
+    "active_new_positions_allowed": false,
+    "research_candidate": "triple_screen_rf",
+    "existing_position_rules_unchanged": true,
+    "long_term_allocation_review_separate": true,
+    "trial_trade_risk": 0.0025,
+    "validated_trade_risk_ceiling": 0.005,
+    "trial_max_positions": 2,
+    "correlated_active_risk_limit": 0.005,
+    "include_working_entry_orders_in_risk": true,
+    "no_automatic_scale_up": true,
+    "first_policy_review_date": "2026-11-30",
+    "decision_checkpoint_weeks_from_first_forward_record": 12,
+    "forward_collection_started_at": null,
+    "backtest_status": "旧结果仅作开发依据；修正后的真实市场回测和独立前瞻验证均待完成。",
+    "manual_gates": [
+      "逐笔入场理由、失效条件、ATR来源、报价时段和退出规则齐全",
+      "实际小额订单费用与双倍成本压力核查",
+      "组合级成本后结果、回撤、风险和暴露匹配基准核查",
+      "冻结版本前瞻记录与实际可成交条件一致",
+      "明确同意进入小额试行后才开放主动新仓"
+    ],
+    "new_limits_are_governance_choices_not_proven_optimal": true
+  },
+  "history": [
+    {
+      "date": "2026-10-28",
+      "event": "优化执行与验证流程：保留目标分区和老仓退出；主动新仓先研究验证。短期单笔风险上限由0.6%收紧至0.5%；未来试行先0.25%、最多2笔、相关主题合计0.5%。既有中期0.5%、主动合计2%、单票10%及不融资保持。不得把这些风控上限称为实际亏损保证。"
+    }
+  ]
 }
