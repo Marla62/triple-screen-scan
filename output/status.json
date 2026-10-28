@@ -1,5 +1,5 @@
 {
- "started_at": "2026-10-28T07:28:53+00:00",
+ "started_at": "2026-10-28T11:26:31+00:00",
  "errors": [
   "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
   "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
@@ -35,5 +35,5 @@
  "market_source": "SPY",
  "priced": 515,
  "as_of": "2026-10-27",
- "elapsed_sec": 64.7
+ "elapsed_sec": 73.9
 }
