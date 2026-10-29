@@ -1,10 +1,11 @@
 {
- "started_at": "2026-10-29T00:50:28+00:00",
+ "started_at": "2026-10-29T02:30:50+00:00",
  "errors": [
   "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
   "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
   "纳斯达克 100 名单全部来源失败，使用内置兜底名单",
-  "yfinance 缺 3 只，尝试 stooq 兜底"
+  "yfinance 缺 3 只，尝试 stooq 兜底",
+  "1 只数据日期 ≠ 2026-10-28，已排除候选: HUBB"
  ],
  "missing": [
   "EA",
@@ -34,6 +35,6 @@
  "universe_size": 518,
  "market_source": "SPY",
  "priced": 515,
- "as_of": "2026-10-27",
- "elapsed_sec": 56.0
+ "as_of": "2026-10-28",
+ "elapsed_sec": 61.7
 }
