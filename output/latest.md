@@ -2,7 +2,7 @@
 
 **仅供研究，尚无样本外验证，不是实盘买入建议；当前股票池仍有幸存者偏差。**
 
-生成时间（UTC）：2026-10-30T02:51:45+00:00  
+生成时间（UTC）：2026-10-31T00:43:44+00:00  
 股票池：518 只，有数据 513 只，候选 4 只  
 大盘：SPY 2026-10-29 收盘 769.36，200 日均线 728.53，在均线之上 ✅（本策略不带过滤，仅供参考）  
 全池回测（同一规则）：3775 笔，胜率 65.1%，盈亏比 0.77，单笔期望 0.89%，平均持有 9.2 天
@@ -26,4 +26,3 @@
 - 纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')
 - 纳斯达克 100 名单全部来源失败，使用内置兜底名单
 - yfinance 缺 3 只，尝试 stooq 兜底
-- 1 只数据日期 ≠ 2026-10-29，已排除候选: HUBB

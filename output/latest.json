@@ -1,7 +1,7 @@
 {
  "implementation_version": "2026-10-28-v1",
  "as_of": "2026-10-29",
- "generated_at": "2026-10-30T02:51:45+00:00",
+ "generated_at": "2026-10-31T00:43:44+00:00",
  "strategy": "bb_revert",
  "strategy_label": "布林带回归",
  "strategy_desc": "收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天",
@@ -71,7 +71,7 @@
    "risk_per_share": 29.918,
    "shares_per_10k": 1,
    "rsi2": 3.2,
-   "fi2": -430179572.0,
+   "fi2": -430904824.0,
    "w_hist_up": false,
    "screen1": false,
    "screen2": false,
@@ -165,7 +165,7 @@
    "risk_per_share": 20.111,
    "shares_per_10k": 2,
    "rsi2": 14.6,
-   "fi2": -581474941.0,
+   "fi2": -593544681.0,
    "w_hist_up": false,
    "screen1": false,
    "screen2": false,
@@ -236,13 +236,12 @@
   }
  ],
  "status": {
-  "started_at": "2026-10-30T02:50:25+00:00",
+  "started_at": "2026-10-31T00:42:35+00:00",
   "errors": [
    "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
    "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
    "纳斯达克 100 名单全部来源失败，使用内置兜底名单",
-   "yfinance 缺 3 只，尝试 stooq 兜底",
-   "1 只数据日期 ≠ 2026-10-29，已排除候选: HUBB"
+   "yfinance 缺 3 只，尝试 stooq 兜底"
   ],
   "missing": [
    "EA",
@@ -252,7 +251,7 @@
   "strategy": "bb_revert",
   "mode": "daily",
   "sp500_count": 503,
-  "ndx_wikipedia_bytes": 226064,
+  "ndx_wikipedia_bytes": 225996,
   "ndx_wikipedia_tables": [
    "11x2:0|1",
    "2x3:Category|All-Time Hig|All-Time Hig",
@@ -273,6 +272,6 @@
   "market_source": "SPY",
   "priced": 515,
   "as_of": "2026-10-29",
-  "elapsed_sec": 79.5
+  "elapsed_sec": 68.1
  }
 }
