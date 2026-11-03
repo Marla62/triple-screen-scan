@@ -1,7 +1,7 @@
 {
  "implementation_version": "2026-10-28-v1",
  "as_of": "2026-10-30",
- "generated_at": "2026-11-02T02:15:00+00:00",
+ "generated_at": "2026-11-03T02:10:27+00:00",
  "strategy": "bb_revert",
  "strategy_label": "布林带回归",
  "strategy_desc": "收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天",
@@ -26,21 +26,21 @@
   "validation": "未作样本外验证；当前成分股名单缺历史剔除及退市股票，仍有幸存者偏差"
  },
  "system_stats": {
-  "trades": 3740,
-  "wins": 2424,
-  "win_rate": 0.6481283422459893,
-  "win_rate_lb": 0.6326781075736368,
-  "avg_win": 0.04519446811448,
-  "avg_loss": -0.059425737568459334,
-  "payoff": 0.7605201039770908,
-  "expectancy": 0.008381582906258567,
-  "profit_factor": 1.400836422523152,
-  "avg_days": 9.200267379679145,
-  "exp_per_day": 0.0009108827822806719,
+  "trades": 3725,
+  "wins": 2412,
+  "win_rate": 0.6475167785234899,
+  "win_rate_lb": 0.632029751829615,
+  "avg_win": 0.04524595482583302,
+  "avg_loss": -0.05947665930298266,
+  "payoff": 0.7607346370169114,
+  "expectancy": 0.008332990436266579,
+  "profit_factor": 1.397480536545918,
+  "avg_days": 9.198389261744966,
+  "exp_per_day": 0.0009057862609090726,
   "reasons": {
-   "cond": 2461,
-   "stop": 736,
-   "time": 543
+   "cond": 2449,
+   "stop": 734,
+   "time": 542
   },
   "tickers_with_data": 513
  },
@@ -201,7 +201,7 @@
    "candidate": true,
    "status": "新信号",
    "signal_date": "2026-10-30",
-   "signal_score": 0.6242108013752582,
+   "signal_score": 0.6242108013762355,
    "entry_mode": "next_open",
    "entry_text": "次日开盘买入（参考价 = 收盘价）",
    "buy_stop": null,
@@ -226,12 +226,12 @@
    "bt_win_rate": 0.7777777777777778,
    "bt_win_rate_lb": 0.4525833436728054,
    "bt_avg_win": 0.020040234074657142,
-   "bt_avg_loss": -0.05557614237835573,
-   "bt_payoff": 0.3605905918806963,
-   "bt_expectancy": 0.003236594862876505,
-   "bt_profit_factor": 1.2620670715824371,
+   "bt_avg_loss": -0.055576142378355564,
+   "bt_payoff": 0.36059059188069736,
+   "bt_expectancy": 0.0032365948628765417,
+   "bt_profit_factor": 1.262067071582441,
    "bt_avg_days": 6.888888888888889,
-   "bt_exp_per_day": 0.0004698282865465894,
+   "bt_exp_per_day": 0.0004698282865465947,
    "rank": 4
   },
   {
@@ -248,7 +248,7 @@
    "candidate": true,
    "status": "新信号",
    "signal_date": "2026-10-30",
-   "signal_score": 0.5026051975407495,
+   "signal_score": 0.5026051975399264,
    "entry_mode": "next_open",
    "entry_text": "次日开盘买入（参考价 = 收盘价）",
    "buy_stop": null,
@@ -342,7 +342,7 @@
    "candidate": true,
    "status": "新信号",
    "signal_date": "2026-10-30",
-   "signal_score": 0.30756066046103603,
+   "signal_score": 0.3075606604500225,
    "entry_mode": "next_open",
    "entry_text": "次日开盘买入（参考价 = 收盘价）",
    "buy_stop": null,
@@ -367,12 +367,12 @@
    "bt_win_rate": 0.0,
    "bt_win_rate_lb": 0.0,
    "bt_avg_win": 0.0,
-   "bt_avg_loss": -0.051414169376069796,
+   "bt_avg_loss": -0.051414169375969654,
    "bt_payoff": 0.0,
-   "bt_expectancy": -0.051414169376069796,
+   "bt_expectancy": -0.051414169375969654,
    "bt_profit_factor": 0.0,
    "bt_avg_days": 14.5,
-   "bt_exp_per_day": -0.003545804784556538,
+   "bt_exp_per_day": -0.0035458047845496315,
    "rank": 7
   },
   {
@@ -518,7 +518,7 @@
   }
  ],
  "status": {
-  "started_at": "2026-11-02T02:13:55+00:00",
+  "started_at": "2026-11-03T02:09:30+00:00",
   "errors": [
    "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
    "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
@@ -554,6 +554,6 @@
   "market_source": "SPY",
   "priced": 515,
   "as_of": "2026-10-30",
-  "elapsed_sec": 64.3
+  "elapsed_sec": 56.4
  }
 }
