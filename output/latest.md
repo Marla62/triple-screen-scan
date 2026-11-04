@@ -1,11 +1,11 @@
-# 候选清单 — 布林带回归 — 数据截至 2026-11-02（美东收盘）
+# 候选清单 — 布林带回归 — 数据截至 2026-11-03（美东收盘）
 
 **仅供研究，尚无样本外验证，不是实盘买入建议；当前股票池仍有幸存者偏差。**
 
-生成时间（UTC）：2026-11-04T01:17:14+00:00  
-股票池：518 只，有数据 512 只，候选 9 只  
-大盘：SPY 2026-11-02 收盘 752.1，200 日均线 729.15，在均线之上 ✅（本策略不带过滤，仅供参考）  
-全池回测（同一规则）：3714 笔，胜率 64.8%，盈亏比 0.76，单笔期望 0.83%，平均持有 9.2 天
+生成时间（UTC）：2026-11-04T03:01:58+00:00  
+股票池：518 只，有数据 512 只，候选 6 只  
+大盘：SPY 2026-11-03 收盘 754.35，200 日均线 729.47，在均线之上 ✅（本策略不带过滤，仅供参考）  
+全池回测（同一规则）：3719 笔，胜率 64.7%，盈亏比 0.76，单笔期望 0.82%，平均持有 9.2 天
 
 入场：收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天  
 出场：止损 = 入场价 − 3×ATR；收盘 ≥ 20 日均线(中轨) → 次日开盘卖出；最多持有 15 个交易日  
@@ -15,15 +15,12 @@
 
 | # | 代码 | 名称 | 状态 | 信号强度 | 收盘 | ATR14 | 参考价(收盘) | 初始止损 | 止盈 | 每股止损距离 | 每$1万示例股数 | 修正胜率 | 原始胜率 | 笔数 | 盈亏比 | 单笔期望 | 平均持有天 | 模拟持仓 |
 |--:|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| 1 | **DDOG** | Datadog | 新信号 | 0.954 | 216.10 | 16.23 | 216.10 | 167.42 |  | 48.68 | 1 | **25.0%** | ⚠️样本不足 57.1% | 7 | 0.84 | 0.29% | 9.9 | 持有中 2026-11-02 入场 235.51，止损 187.86 |
-| 2 | **ILMN** | Illumina, Inc. | 新信号 | 0.777 | 226.58 | 16.69 | 226.58 | 176.50 |  | 50.08 | 0 | **37.6%** | ⚠️样本不足 80.0% | 5 | 0.62 | 3.44% | 7.6 | 持有中 2026-11-02 入场 236.01，止损 185.00 |
-| 3 | **NTAP** | NetApp | 新信号 | 0.629 | 185.26 | 10.51 | 185.26 | 153.73 |  | 31.53 | 1 | **45.3%** | 77.8% | 9 | 0.92 | 2.49% | 8.0 |  |
-| 4 | **MSFT** | Microsoft | 新信号 | 0.572 | 507.12 | 12.79 | 507.12 | 468.74 |  | 38.38 | 1 | **15.8%** | ⚠️样本不足 42.9% | 7 | 0.58 | -1.90% | 6.9 |  |
-| 5 | **TWLO** | Twilio | 新信号 | 0.480 | 207.60 | 17.97 | 207.60 | 153.70 |  | 53.90 | 0 | **25.0%** | ⚠️样本不足 57.1% | 7 | 0.81 | 0.56% | 9.1 | 持有中 2026-11-02 入场 203.69，止损 148.98 |
-| 6 | **PLTR** | Palantir Technologies | 新信号 | 0.358 | 178.34 | 8.36 | 178.34 | 153.25 |  | 25.09 | 1 | **45.3%** | 77.8% | 9 | 4.69 | 13.10% | 8.4 |  |
-| 7 | **ZBRA** | Zebra Technologies | 新信号 | 0.239 | 361.13 | 12.82 | 361.13 | 322.66 |  | 38.47 | 1 | **43.6%** | ⚠️样本不足 83.3% | 6 | 0.33 | 1.05% | 9.0 | 持有中 2026-11-02 入场 363.12，止损 325.02 |
-| 8 | **SHOP** | SHOP | 新信号 | 0.164 | 156.22 | 7.41 | 156.22 | 133.98 |  | 22.24 | 2 | **35.9%** | ⚠️样本不足 71.4% | 7 | 0.40 | -0.03% | 8.4 | 持有中 2026-11-02 入场 158.29，止损 136.07 |
-| 9 | **AMD** | Advanced Micro Devices | 新信号 | 0.040 | 466.84 | 30.68 | 466.84 | 374.81 |  | 92.03 | 0 | **35.4%** | 66.7% | 9 | 0.66 | 0.93% | 9.1 |  |
+| 1 | **ZBRA** | Zebra Technologies | 新信号 | 1.345 | 329.50 | 15.48 | 329.50 | 283.05 |  | 46.45 | 1 | **35.9%** | ⚠️样本不足 71.4% | 7 | 0.27 | -1.14% | 7.9 |  |
+| 2 | **SHOP** | SHOP | 新信号 | 1.086 | 142.57 | 8.35 | 142.57 | 117.51 |  | 25.06 | 1 | **30.6%** | 62.5% | 8 | 0.39 | -1.79% | 7.5 |  |
+| 3 | **PLTR** | Palantir Technologies | 新信号 | 0.297 | 175.40 | 8.70 | 175.40 | 149.30 |  | 26.10 | 1 | **45.3%** | 77.8% | 9 | 4.69 | 13.10% | 8.4 | 持有中 2026-11-03 入场 168.18，止损 143.09 |
+| 4 | **AAPL** | Apple Inc. | 新信号 | 0.271 | 331.90 | 7.44 | 331.90 | 309.57 |  | 22.33 | 2 | **43.4%** | 72.7% | 11 | 0.98 | 1.93% | 9.1 |  |
+| 5 | **DDOG** | Datadog | 新信号 | 0.203 | 220.52 | 15.84 | 220.52 | 173.01 |  | 47.51 | 1 | **25.0%** | ⚠️样本不足 57.1% | 7 | 0.84 | 0.29% | 9.9 | 持有中 2026-11-02 入场 235.51，止损 187.86 |
+| 6 | **HSIC** | Henry Schein | 新信号 | 0.133 | 82.50 | 2.20 | 82.50 | 75.91 |  | 6.59 | 7 | **20.8%** | ⚠️样本不足 66.7% | 3 | 1.16 | 1.53% | 9.7 |  |
 
 ## 运行提示
 
@@ -31,3 +28,7 @@
 - 纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')
 - 纳斯达克 100 名单全部来源失败，使用内置兜底名单
 - yfinance 缺 4 只，尝试 stooq 兜底
+- stooq EA: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=ea.us&i=d&d1=20221104 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7f5238f8b770>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))
+- stooq KVUE: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=kvue.us&i=d&d1=20221104 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7f5234e42c60>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))
+- stooq VYLR: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=vylr.us&i=d&d1=20221104 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7f5234b43350>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))
+- stooq WBD: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=wbd.us&i=d&d1=20221104 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7f5234d11040>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))
