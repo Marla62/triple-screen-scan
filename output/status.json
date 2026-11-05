@@ -1,14 +1,10 @@
 {
- "started_at": "2026-11-04T02:58:28+00:00",
+ "started_at": "2026-11-05T01:26:23+00:00",
  "errors": [
   "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
   "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
   "纳斯达克 100 名单全部来源失败，使用内置兜底名单",
-  "yfinance 缺 4 只，尝试 stooq 兜底",
-  "stooq EA: ConnectTimeout(MaxRetryError(\"HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=ea.us&i=d&d1=20221104 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7f5238f8b770>, 'Connection to stooq.com timed out. (connect timeout=20)'))\"))",
-  "stooq KVUE: ConnectTimeout(MaxRetryError(\"HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=kvue.us&i=d&d1=20221104 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7f5234e42c60>, 'Connection to stooq.com timed out. (connect timeout=20)'))\"))",
-  "stooq VYLR: ConnectTimeout(MaxRetryError(\"HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=vylr.us&i=d&d1=20221104 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7f5234b43350>, 'Connection to stooq.com timed out. (connect timeout=20)'))\"))",
-  "stooq WBD: ConnectTimeout(MaxRetryError(\"HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=wbd.us&i=d&d1=20221104 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7f5234d11040>, 'Connection to stooq.com timed out. (connect timeout=20)'))\"))"
+  "yfinance 缺 4 只，尝试 stooq 兜底"
  ],
  "missing": [
   "EA",
@@ -19,7 +15,7 @@
  "strategy": "bb_revert",
  "mode": "daily",
  "sp500_count": 503,
- "ndx_wikipedia_bytes": 226919,
+ "ndx_wikipedia_bytes": 226920,
  "ndx_wikipedia_tables": [
   "11x2:0|1",
   "2x3:Category|All-Time Hig|All-Time Hig",
@@ -40,5 +36,5 @@
  "market_source": "SPY",
  "priced": 514,
  "as_of": "2026-11-03",
- "elapsed_sec": 210.0
+ "elapsed_sec": 55.4
 }
