@@ -1,7 +1,7 @@
 {
  "implementation_version": "2026-10-28-v1",
  "as_of": "2026-11-04",
- "generated_at": "2026-11-05T03:16:46+00:00",
+ "generated_at": "2026-11-06T01:30:39+00:00",
  "strategy": "bb_revert",
  "strategy_label": "布林带回归",
  "strategy_desc": "收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天",
@@ -26,23 +26,23 @@
   "validation": "未作样本外验证；当前成分股名单缺历史剔除及退市股票，仍有幸存者偏差"
  },
  "system_stats": {
-  "trades": 3724,
-  "wins": 2407,
-  "win_rate": 0.6463480128893663,
-  "win_rate_lb": 0.6308485705032911,
-  "avg_win": 0.045324752238968424,
-  "avg_loss": -0.06022164962832691,
-  "payoff": 0.7526321932179134,
-  "expectancy": 0.007998057486221925,
-  "profit_factor": 1.3755396272403322,
-  "avg_days": 9.186895810955962,
-  "exp_per_day": 0.0008704669047166744,
+  "trades": 3730,
+  "wins": 2410,
+  "win_rate": 0.646112600536193,
+  "win_rate_lb": 0.6306236740226364,
+  "avg_win": 0.04538997241951781,
+  "avg_loss": -0.06021619704663659,
+  "payoff": 0.7537834444171876,
+  "expectancy": 0.008017279739806333,
+  "profit_factor": 1.37622583412532,
+  "avg_days": 9.192225201072386,
+  "exp_per_day": 0.000872053348579191,
   "reasons": {
-   "cond": 2444,
-   "stop": 741,
-   "time": 539
+   "cond": 2447,
+   "stop": 742,
+   "time": 541
   },
-  "tickers_with_data": 512
+  "tickers_with_data": 513
  },
  "candidate_count": 7,
  "candidates": [
@@ -259,7 +259,7 @@
    "risk_per_share": 26.988,
    "shares_per_10k": 1,
    "rsi2": 0.4,
-   "fi2": -145160805.0,
+   "fi2": -145398345.0,
    "w_hist_up": false,
    "screen1": false,
    "screen2": false,
@@ -377,23 +377,22 @@
   }
  ],
  "status": {
-  "started_at": "2026-11-05T03:15:55+00:00",
+  "started_at": "2026-11-06T01:29:39+00:00",
   "errors": [
    "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
    "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
    "纳斯达克 100 名单全部来源失败，使用内置兜底名单",
-   "yfinance 缺 4 只，尝试 stooq 兜底"
+   "yfinance 缺 3 只，尝试 stooq 兜底"
   ],
   "missing": [
    "EA",
-   "KVUE",
    "VYLR",
    "WBD"
   ],
   "strategy": "bb_revert",
   "mode": "daily",
   "sp500_count": 503,
-  "ndx_wikipedia_bytes": 226918,
+  "ndx_wikipedia_bytes": 226920,
   "ndx_wikipedia_tables": [
    "11x2:0|1",
    "2x3:Category|All-Time Hig|All-Time Hig",
@@ -412,8 +411,8 @@
   "ndx_count": 100,
   "universe_size": 518,
   "market_source": "SPY",
-  "priced": 514,
+  "priced": 515,
   "as_of": "2026-11-04",
-  "elapsed_sec": 51.3
+  "elapsed_sec": 60.1
  }
 }
