@@ -1,7 +1,7 @@
 {
  "implementation_version": "2026-10-28-v1",
  "as_of": "2026-11-09",
- "generated_at": "2026-11-10T05:51:32+00:00",
+ "generated_at": "2026-11-11T01:13:21+00:00",
  "strategy": "bb_revert",
  "strategy_label": "布林带回归",
  "strategy_desc": "收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天",
@@ -30,13 +30,13 @@
   "wins": 2402,
   "win_rate": 0.6437952291610828,
   "win_rate_lb": 0.6282882911534312,
-  "avg_win": 0.045498554272626064,
-  "avg_loss": -0.06110125254774235,
-  "payoff": 0.7446419242727489,
-  "expectancy": 0.007527194512703895,
-  "profit_factor": 1.3458464274666235,
-  "avg_days": 9.199142321093541,
-  "exp_per_day": 0.0008181304141608131,
+  "avg_win": 0.04549613501370834,
+  "avg_loss": -0.06110125249308511,
+  "payoff": 0.7446023306781998,
+  "expectancy": 0.007525637024823725,
+  "profit_factor": 1.3457748670346397,
+  "avg_days": 9.198874296435273,
+  "exp_per_day": 0.0008179849600774141,
   "reasons": {
    "cond": 2440,
    "stop": 752,
@@ -60,7 +60,7 @@
    "candidate": true,
    "status": "新信号",
    "signal_date": "2026-11-09",
-   "signal_score": 0.5334057182619709,
+   "signal_score": 0.5334057182619456,
    "entry_mode": "next_open",
    "entry_text": "次日开盘买入（参考价 = 收盘价）",
    "buy_stop": null,
@@ -107,7 +107,7 @@
    "candidate": true,
    "status": "新信号",
    "signal_date": "2026-11-09",
-   "signal_score": 0.10242010660395161,
+   "signal_score": 0.10242010660395653,
    "entry_mode": "next_open",
    "entry_text": "次日开盘买入（参考价 = 收盘价）",
    "buy_stop": null,
@@ -142,7 +142,7 @@
   }
  ],
  "status": {
-  "started_at": "2026-11-10T05:50:45+00:00",
+  "started_at": "2026-11-11T01:12:19+00:00",
   "errors": [
    "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
    "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
@@ -157,7 +157,7 @@
   "strategy": "bb_revert",
   "mode": "daily",
   "sp500_count": 503,
-  "ndx_wikipedia_bytes": 226525,
+  "ndx_wikipedia_bytes": 226582,
   "ndx_wikipedia_tables": [
    "11x2:0|1",
    "2x3:Category|All-Time Hig|All-Time Hig",
@@ -178,6 +178,6 @@
   "market_source": "SPY",
   "priced": 515,
   "as_of": "2026-11-09",
-  "elapsed_sec": 46.5
+  "elapsed_sec": 62.0
  }
 }
