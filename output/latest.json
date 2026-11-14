@@ -1,7 +1,7 @@
 {
  "implementation_version": "2026-10-28-v1",
  "as_of": "2026-11-12",
- "generated_at": "2026-11-13T06:46:11+00:00",
+ "generated_at": "2026-11-14T01:25:40+00:00",
  "strategy": "bb_revert",
  "strategy_label": "布林带回归",
  "strategy_desc": "收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天",
@@ -26,23 +26,23 @@
   "validation": "未作样本外验证；当前成分股名单缺历史剔除及退市股票，仍有幸存者偏差"
  },
  "system_stats": {
-  "trades": 3733,
-  "wins": 2405,
-  "win_rate": 0.6442539512456469,
-  "win_rate_lb": 0.6287551512983947,
-  "avg_win": 0.04555965149830358,
-  "avg_loss": -0.06110266204069917,
-  "payoff": 0.7456246581852239,
-  "expectancy": 0.007614954905805411,
-  "profit_factor": 1.3503217642586323,
-  "avg_days": 9.19314224484329,
-  "exp_per_day": 0.0008282092667707251,
+  "trades": 3724,
+  "wins": 2397,
+  "win_rate": 0.6436627282491945,
+  "win_rate_lb": 0.6281399589663574,
+  "avg_win": 0.04559161681424986,
+  "avg_loss": -0.06109952516728879,
+  "payoff": 0.7461861068383313,
+  "expectancy": 0.007573586360570542,
+  "profit_factor": 1.347858400973233,
+  "avg_days": 9.197905477980665,
+  "exp_per_day": 0.0008232831924445298,
   "reasons": {
-   "cond": 2443,
-   "stop": 751,
+   "cond": 2435,
+   "stop": 750,
    "time": 539
   },
-  "tickers_with_data": 513
+  "tickers_with_data": 512
  },
  "candidate_count": 2,
  "candidates": [
@@ -118,7 +118,7 @@
    "risk_per_share": 2.208,
    "shares_per_10k": 22,
    "rsi2": 11.6,
-   "fi2": -12373475.0,
+   "fi2": -12383312.0,
    "w_hist_up": false,
    "screen1": true,
    "screen2": false,
@@ -142,14 +142,15 @@
   }
  ],
  "status": {
-  "started_at": "2026-11-13T06:45:24+00:00",
+  "started_at": "2026-11-14T01:24:48+00:00",
   "errors": [
    "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
-   "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
+   "纳斯达克 100 来源 invesco_qqq 失败: ParserError('Error tokenizing data. C error: Expected 1 fields in line 11, saw 13\\n')",
    "纳斯达克 100 名单全部来源失败，使用内置兜底名单",
-   "yfinance 缺 3 只，尝试 stooq 兜底"
+   "yfinance 缺 4 只，尝试 stooq 兜底"
   ],
   "missing": [
+   "ADI",
    "EA",
    "VYLR",
    "WBD"
@@ -157,7 +158,7 @@
   "strategy": "bb_revert",
   "mode": "daily",
   "sp500_count": 503,
-  "ndx_wikipedia_bytes": 226565,
+  "ndx_wikipedia_bytes": 227687,
   "ndx_wikipedia_tables": [
    "11x2:0|1",
    "2x3:Category|All-Time Hig|All-Time Hig",
@@ -176,8 +177,8 @@
   "ndx_count": 100,
   "universe_size": 518,
   "market_source": "SPY",
-  "priced": 515,
+  "priced": 514,
   "as_of": "2026-11-12",
-  "elapsed_sec": 46.8
+  "elapsed_sec": 51.5
  }
 }
