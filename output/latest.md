@@ -1,11 +1,11 @@
-# 候选清单 — 布林带回归 — 数据截至 2026-11-12（美东收盘）
+# 候选清单 — 布林带回归 — 数据截至 2026-11-13（美东收盘）
 
 **仅供研究，尚无样本外验证，不是实盘买入建议；当前股票池仍有幸存者偏差。**
 
-生成时间（UTC）：2026-11-14T01:25:40+00:00  
-股票池：518 只，有数据 512 只，候选 2 只  
-大盘：SPY 2026-11-12 收盘 757.12，200 日均线 731.62，在均线之上 ✅（本策略不带过滤，仅供参考）  
-全池回测（同一规则）：3724 笔，胜率 64.4%，盈亏比 0.75，单笔期望 0.76%，平均持有 9.2 天
+生成时间（UTC）：2026-11-16T06:01:50+00:00  
+股票池：518 只，有数据 513 只，候选 0 只  
+大盘：SPY 2026-11-13 收盘 754.37，200 日均线 731.92，在均线之上 ✅（本策略不带过滤，仅供参考）  
+全池回测（同一规则）：3733 笔，胜率 64.5%，盈亏比 0.75，单笔期望 0.76%，平均持有 9.2 天
 
 入场：收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天  
 出场：止损 = 入场价 − 3×ATR；收盘 ≥ 20 日均线(中轨) → 次日开盘卖出；最多持有 15 个交易日  
@@ -15,12 +15,13 @@
 
 | # | 代码 | 名称 | 状态 | 信号强度 | 收盘 | ATR14 | 参考价(收盘) | 初始止损 | 止盈 | 每股止损距离 | 每$1万示例股数 | 修正胜率 | 原始胜率 | 笔数 | 盈亏比 | 单笔期望 | 平均持有天 | 模拟持仓 |
 |--:|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| 1 | **IFF** | International Flavors  | 新信号 | 0.079 | 80.38 | 2.60 | 80.38 | 72.57 |  | 7.81 | 6 | **40.9%** | 75.0% | 8 | 0.88 | 3.10% | 6.1 | 持有中 2026-11-09 入场 83.04，止损 75.11 |
-| 2 | **PFE** | Pfizer | 新信号 | 0.010 | 28.83 | 0.74 | 28.83 | 26.62 |  | 2.21 | 22 | **20.7%** | ⚠️样本不足 100.0% | 1 |  | 3.94% | 4.0 |  |
 
 ## 运行提示
 
 - 纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源
 - 纳斯达克 100 来源 invesco_qqq 失败: ParserError('Error tokenizing data. C error: Expected 1 fields in line 11, saw 13\n')
 - 纳斯达克 100 名单全部来源失败，使用内置兜底名单
-- yfinance 缺 4 只，尝试 stooq 兜底
+- yfinance 缺 3 只，尝试 stooq 兜底
+- stooq EA: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=ea.us&i=d&d1=20221116 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x702e01e7ab70>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))
+- stooq VYLR: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=vylr.us&i=d&d1=20221116 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x702dfc35b800>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))
+- stooq WBD: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=wbd.us&i=d&d1=20221116 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x702dfc655940>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))

@@ -1,13 +1,15 @@
 {
- "started_at": "2026-11-14T01:24:48+00:00",
+ "started_at": "2026-11-16T05:59:00+00:00",
  "errors": [
   "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
   "纳斯达克 100 来源 invesco_qqq 失败: ParserError('Error tokenizing data. C error: Expected 1 fields in line 11, saw 13\\n')",
   "纳斯达克 100 名单全部来源失败，使用内置兜底名单",
-  "yfinance 缺 4 只，尝试 stooq 兜底"
+  "yfinance 缺 3 只，尝试 stooq 兜底",
+  "stooq EA: ConnectTimeout(MaxRetryError(\"HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=ea.us&i=d&d1=20221116 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x702e01e7ab70>, 'Connection to stooq.com timed out. (connect timeout=20)'))\"))",
+  "stooq VYLR: ConnectTimeout(MaxRetryError(\"HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=vylr.us&i=d&d1=20221116 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x702dfc35b800>, 'Connection to stooq.com timed out. (connect timeout=20)'))\"))",
+  "stooq WBD: ConnectTimeout(MaxRetryError(\"HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=wbd.us&i=d&d1=20221116 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x702dfc655940>, 'Connection to stooq.com timed out. (connect timeout=20)'))\"))"
  ],
  "missing": [
-  "ADI",
   "EA",
   "VYLR",
   "WBD"
@@ -15,7 +17,7 @@
  "strategy": "bb_revert",
  "mode": "daily",
  "sp500_count": 503,
- "ndx_wikipedia_bytes": 227687,
+ "ndx_wikipedia_bytes": 227757,
  "ndx_wikipedia_tables": [
   "11x2:0|1",
   "2x3:Category|All-Time Hig|All-Time Hig",
@@ -34,7 +36,7 @@
  "ndx_count": 100,
  "universe_size": 518,
  "market_source": "SPY",
- "priced": 514,
- "as_of": "2026-11-12",
- "elapsed_sec": 51.5
+ "priced": 515,
+ "as_of": "2026-11-13",
+ "elapsed_sec": 169.9
 }
