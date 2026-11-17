@@ -1,1 +1,2 @@
 ﻿rank,ticker,name,sector,index,strategy,status,signal_date,signal_score,close,high,atr14,atr_pct,entry_mode,buy_stop,ref_price,initial_stop,target,risk_per_share,shares_per_10k,bt_win_rate_lb,bt_win_rate,bt_trades,bt_wins,bt_payoff,bt_expectancy,bt_profit_factor,bt_avg_days,rsi2,w_hist_up,fi2,momentum_12_1,mom_rank
+1,RVTY,Revvity,Health Care,SPX,bb_revert,新信号,2026-11-16,0.04097367728397027,148.85,153.06,7.491,5.03,next_open,,148.85,126.38,,22.474,2,0.4384939195509822,1.0,3,3,,0.0407374896819969,,6.0,3.4,False,-6377949.0,,
