@@ -1,7 +1,7 @@
 {
  "implementation_version": "2026-10-28-v1",
  "as_of": "2026-11-19",
- "generated_at": "2026-11-20T07:22:30+00:00",
+ "generated_at": "2026-11-21T02:08:56+00:00",
  "strategy": "bb_revert",
  "strategy_label": "布林带回归",
  "strategy_desc": "收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天",
@@ -353,7 +353,7 @@
    "risk_per_share": 1.998,
    "shares_per_10k": 24,
    "rsi2": 0.8,
-   "fi2": -16824100.0,
+   "fi2": -16839838.0,
    "w_hist_up": false,
    "screen1": false,
    "screen2": false,
@@ -870,7 +870,7 @@
    "risk_per_share": 47.753,
    "shares_per_10k": 1,
    "rsi2": 8.0,
-   "fi2": -212449709.0,
+   "fi2": -214292535.0,
    "w_hist_up": false,
    "screen1": false,
    "screen2": false,
@@ -1035,7 +1035,7 @@
   }
  ],
  "status": {
-  "started_at": "2026-11-20T07:21:48+00:00",
+  "started_at": "2026-11-21T02:08:08+00:00",
   "errors": [
    "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
    "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
@@ -1050,7 +1050,7 @@
   "strategy": "bb_revert",
   "mode": "daily",
   "sp500_count": 503,
-  "ndx_wikipedia_bytes": 227723,
+  "ndx_wikipedia_bytes": 227715,
   "ndx_wikipedia_tables": [
    "11x2:0|1",
    "2x3:Category|All-Time Hig|All-Time Hig",
@@ -1071,6 +1071,6 @@
   "market_source": "SPY",
   "priced": 515,
   "as_of": "2026-11-19",
-  "elapsed_sec": 41.2
+  "elapsed_sec": 47.5
  }
 }
