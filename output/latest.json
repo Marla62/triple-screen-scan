@@ -1,7 +1,7 @@
 {
  "implementation_version": "2026-10-28-v1",
  "as_of": "2026-11-23",
- "generated_at": "2026-11-24T05:18:18+00:00",
+ "generated_at": "2026-11-24T06:16:24+00:00",
  "strategy": "bb_revert",
  "strategy_label": "布林带回归",
  "strategy_desc": "收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天",
@@ -27,19 +27,19 @@
  },
  "system_stats": {
   "trades": 3714,
-  "wins": 2392,
-  "win_rate": 0.6440495422724825,
-  "win_rate_lb": 0.6285090414525312,
-  "avg_win": 0.04562779117893631,
-  "avg_loss": -0.06149714172155945,
-  "payoff": 0.741949786634397,
-  "expectancy": 0.007496622278975244,
-  "profit_factor": 1.3424689028967305,
-  "avg_days": 9.191168551427033,
-  "exp_per_day": 0.0008154898700753926,
+  "wins": 2394,
+  "win_rate": 0.6445880452342488,
+  "win_rate_lb": 0.6290522007905628,
+  "avg_win": 0.04566132119928742,
+  "avg_loss": -0.061512358179729824,
+  "payoff": 0.7423113428015868,
+  "expectancy": 0.0075705143117530205,
+  "profit_factor": 1.3462828444446961,
+  "avg_days": 9.193322563274098,
+  "exp_per_day": 0.0008233349971845012,
   "reasons": {
-   "cond": 2429,
-   "stop": 749,
+   "cond": 2431,
+   "stop": 747,
    "time": 536
   },
   "tickers_with_data": 512
@@ -142,7 +142,7 @@
   }
  ],
  "status": {
-  "started_at": "2026-11-24T05:17:32+00:00",
+  "started_at": "2026-11-24T06:15:34+00:00",
   "errors": [
    "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
    "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
@@ -151,7 +151,7 @@
    "1 只数据日期 ≠ 2026-11-23，已排除候选: SNDK"
   ],
   "missing": [
-   "AMAT",
+   "ABBV",
    "EA",
    "VYLR",
    "WBD"
@@ -159,7 +159,7 @@
   "strategy": "bb_revert",
   "mode": "daily",
   "sp500_count": 503,
-  "ndx_wikipedia_bytes": 227723,
+  "ndx_wikipedia_bytes": 227715,
   "ndx_wikipedia_tables": [
    "11x2:0|1",
    "2x3:Category|All-Time Hig|All-Time Hig",
@@ -180,6 +180,6 @@
   "market_source": "SPY",
   "priced": 514,
   "as_of": "2026-11-23",
-  "elapsed_sec": 46.4
+  "elapsed_sec": 49.8
  }
 }
