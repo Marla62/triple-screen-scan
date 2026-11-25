@@ -1,11 +1,11 @@
-# 候选清单 — 布林带回归 — 数据截至 2026-11-23（美东收盘）
+# 候选清单 — 布林带回归 — 数据截至 2026-11-24（美东收盘）
 
 **仅供研究，尚无样本外验证，不是实盘买入建议；当前股票池仍有幸存者偏差。**
 
-生成时间（UTC）：2026-11-24T06:16:24+00:00  
-股票池：518 只，有数据 512 只，候选 2 只  
-大盘：SPY 2026-11-23 收盘 722.29，200 日均线 732.91，在均线之下 ⛔（本策略不带过滤，仅供参考）  
-全池回测（同一规则）：3714 笔，胜率 64.5%，盈亏比 0.74，单笔期望 0.76%，平均持有 9.2 天
+生成时间（UTC）：2026-11-25T04:09:13+00:00  
+股票池：518 只，有数据 513 只，候选 2 只  
+大盘：SPY 2026-11-24 收盘 718.78，200 日均线 733.04，在均线之下 ⛔（本策略不带过滤，仅供参考）  
+全池回测（同一规则）：3726 笔，胜率 64.4%，盈亏比 0.74，单笔期望 0.75%，平均持有 9.2 天
 
 入场：收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天  
 出场：止损 = 入场价 − 3×ATR；收盘 ≥ 20 日均线(中轨) → 次日开盘卖出；最多持有 15 个交易日  
@@ -15,13 +15,16 @@
 
 | # | 代码 | 名称 | 状态 | 信号强度 | 收盘 | ATR14 | 参考价(收盘) | 初始止损 | 止盈 | 每股止损距离 | 每$1万示例股数 | 修正胜率 | 原始胜率 | 笔数 | 盈亏比 | 单笔期望 | 平均持有天 | 模拟持仓 |
 |--:|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| 1 | **ELV** | Elevance Health | 新信号 | 0.454 | 379.55 | 15.26 | 379.55 | 333.78 |  | 45.77 | 1 | **43.6%** | ⚠️样本不足 83.3% | 6 | 0.71 | 2.44% | 4.5 | 持有中 2026-11-19 入场 402.23，止损 358.44 |
-| 2 | **AMT** | American Tower | 新信号 | 0.017 | 179.31 | 5.14 | 179.31 | 163.88 |  | 15.43 | 3 | **3.6%** | ⚠️样本不足 20.0% | 5 | 0.50 | -3.66% | 9.6 | 持有中 2026-11-20 入场 183.29，止损 168.00 |
+| 1 | **EBAY** | eBay Inc. | 新信号 | 0.245 | 113.77 | 3.99 | 113.77 | 101.79 |  | 11.98 | 4 | **45.3%** | 77.8% | 9 | 5.49 | 4.90% | 9.4 | 持有中 2026-11-23 入场 117.36，止损 106.03 |
+| 2 | **HAS** | Hasbro | 新信号 | 0.064 | 112.24 | 3.10 | 112.24 | 102.95 |  | 9.29 | 5 | **13.7%** | 37.5% | 8 | 0.77 | -1.65% | 8.8 | 持有中 2026-11-20 入场 115.60，止损 106.15 |
 
 ## 运行提示
 
 - 纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源
 - 纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')
 - 纳斯达克 100 名单全部来源失败，使用内置兜底名单
-- yfinance 缺 4 只，尝试 stooq 兜底
-- 1 只数据日期 ≠ 2026-11-23，已排除候选: SNDK
+- yfinance 缺 3 只，尝试 stooq 兜底
+- stooq EA: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=ea.us&i=d&d1=20221125 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7acab4f40470>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))
+- stooq VYLR: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=vylr.us&i=d&d1=20221125 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7acab4d96570>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))
+- stooq WBD: ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=wbd.us&i=d&d1=20221125 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7acab4f49490>, 'Connection to stooq.com timed out. (connect timeout=20)'))"))
+- 1 只数据日期 ≠ 2026-11-24，已排除候选: SNDK
