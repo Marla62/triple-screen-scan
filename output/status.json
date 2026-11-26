@@ -1,16 +1,14 @@
 {
- "started_at": "2026-11-25T04:06:25+00:00",
+ "started_at": "2026-11-26T03:30:01+00:00",
  "errors": [
   "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
   "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
   "纳斯达克 100 名单全部来源失败，使用内置兜底名单",
-  "yfinance 缺 3 只，尝试 stooq 兜底",
-  "stooq EA: ConnectTimeout(MaxRetryError(\"HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=ea.us&i=d&d1=20221125 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7acab4f40470>, 'Connection to stooq.com timed out. (connect timeout=20)'))\"))",
-  "stooq VYLR: ConnectTimeout(MaxRetryError(\"HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=vylr.us&i=d&d1=20221125 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7acab4d96570>, 'Connection to stooq.com timed out. (connect timeout=20)'))\"))",
-  "stooq WBD: ConnectTimeout(MaxRetryError(\"HTTPSConnectionPool(host='stooq.com', port=443): Max retries exceeded with url: /q/d/l/?s=wbd.us&i=d&d1=20221125 (Caused by ConnectTimeoutError(<HTTPSConnection(host='stooq.com', port=443) at 0x7acab4f49490>, 'Connection to stooq.com timed out. (connect timeout=20)'))\"))",
-  "1 只数据日期 ≠ 2026-11-24，已排除候选: SNDK"
+  "yfinance 缺 4 只，尝试 stooq 兜底",
+  "1 只数据日期 ≠ 2026-11-25，已排除候选: SNDK"
  ],
  "missing": [
+  "AFL",
   "EA",
   "VYLR",
   "WBD"
@@ -18,7 +16,7 @@
  "strategy": "bb_revert",
  "mode": "daily",
  "sp500_count": 503,
- "ndx_wikipedia_bytes": 227647,
+ "ndx_wikipedia_bytes": 227613,
  "ndx_wikipedia_tables": [
   "11x2:0|1",
   "2x3:Category|All-Time Hig|All-Time Hig",
@@ -37,7 +35,7 @@
  "ndx_count": 100,
  "universe_size": 518,
  "market_source": "SPY",
- "priced": 515,
- "as_of": "2026-11-24",
- "elapsed_sec": 167.4
+ "priced": 514,
+ "as_of": "2026-11-25",
+ "elapsed_sec": 49.7
 }
