@@ -1,7 +1,7 @@
 {
  "implementation_version": "2026-10-28-v1",
  "as_of": "2026-11-25",
- "generated_at": "2026-11-26T03:30:51+00:00",
+ "generated_at": "2026-11-27T03:37:23+00:00",
  "strategy": "bb_revert",
  "strategy_label": "布林带回归",
  "strategy_desc": "收盘 > 200 日均线 且 收盘 < 布林下轨(20,2) → 次日开盘买入；收盘 ≥ 中轨(20 日均线) → 次日开盘卖出；3×ATR 保护止损；最多持 15 天",
@@ -26,21 +26,21 @@
   "validation": "未作样本外验证；当前成分股名单缺历史剔除及退市股票，仍有幸存者偏差"
  },
  "system_stats": {
-  "trades": 3721,
-  "wins": 2401,
-  "win_rate": 0.6452566514377855,
-  "win_rate_lb": 0.6297413597023315,
-  "avg_win": 0.045652410318005036,
-  "avg_loss": -0.06177750519605735,
-  "payoff": 0.7389811254618062,
-  "expectancy": 0.00754236235279075,
-  "profit_factor": 1.344161880480149,
-  "avg_days": 9.18462778822897,
-  "exp_per_day": 0.0008210499770269259,
+  "trades": 3727,
+  "wins": 2406,
+  "win_rate": 0.645559431177891,
+  "win_rate_lb": 0.630059380228651,
+  "avg_win": 0.04558993123617845,
+  "avg_loss": -0.06171355164672284,
+  "payoff": 0.7387345245847539,
+  "expectancy": 0.0075572237265694895,
+  "profit_factor": 1.3454922529530036,
+  "avg_days": 9.191038368661122,
+  "exp_per_day": 0.0008220943004852305,
   "reasons": {
-   "cond": 2440,
+   "cond": 2444,
    "stop": 747,
-   "time": 534
+   "time": 536
   },
   "tickers_with_data": 512
  },
@@ -189,7 +189,7 @@
   }
  ],
  "status": {
-  "started_at": "2026-11-26T03:30:01+00:00",
+  "started_at": "2026-11-27T03:36:33+00:00",
   "errors": [
    "纳斯达克 100 来源 wikipedia 只解析到 0 只，换下一个来源",
    "纳斯达克 100 来源 invesco_qqq 失败: HTTPError('406 Client Error: Not Acceptable for url: https://www.invesco.com/us/financial-products/etfs/holdings/main/holdings/0?audienceType=Investor&action=download&ticker=QQQ')",
@@ -198,7 +198,7 @@
    "1 只数据日期 ≠ 2026-11-25，已排除候选: SNDK"
   ],
   "missing": [
-   "AFL",
+   "APTV",
    "EA",
    "VYLR",
    "WBD"
@@ -206,7 +206,7 @@
   "strategy": "bb_revert",
   "mode": "daily",
   "sp500_count": 503,
-  "ndx_wikipedia_bytes": 227613,
+  "ndx_wikipedia_bytes": 227595,
   "ndx_wikipedia_tables": [
    "11x2:0|1",
    "2x3:Category|All-Time Hig|All-Time Hig",
@@ -227,6 +227,6 @@
   "market_source": "SPY",
   "priced": 514,
   "as_of": "2026-11-25",
-  "elapsed_sec": 49.7
+  "elapsed_sec": 49.2
  }
 }
